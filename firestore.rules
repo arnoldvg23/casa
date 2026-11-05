@@ -1,0 +1,20 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Nadie puede listar los hogares: para entrar hay que conocer el código.
+    match /households/{home} {
+      allow get, create: if request.auth != null;
+
+      match /items/{item} {
+        allow read, write: if request.auth != null;
+      }
+      match /history/{entry} {
+        allow read, write: if request.auth != null;
+      }
+      // Cada dispositivo solo escribe su propio token; solo el servidor los lee.
+      match /devices/{uid} {
+        allow write: if request.auth != null && request.auth.uid == uid;
+      }
+    }
+  }
+}
