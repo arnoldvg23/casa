@@ -1,6 +1,6 @@
 // Abre la app al instante y sin cobertura: sirve la copia guardada y actualiza
 // en segundo plano, así que una versión nueva se ve en la siguiente apertura.
-const CACHE = 'casa-v2';
+const CACHE = 'casa-v3';
 const SHELL = [
   './',
   'index.html',
@@ -13,6 +13,8 @@ const SHELL = [
   'js/shopping.js',
   'js/store.js',
   'js/ui.js',
+  'js/wishes.js',
+  'js/vendor/Sortable.min.js',
   'icons/icon.svg',
   'icons/icon-192.png',
   'icons/icon-512.png',
@@ -20,7 +22,9 @@ const SHELL = [
 ];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)));
+  // `reload` salta la caché HTTP del navegador: sense això una versió nova
+  // podria barrejar fitxers nous i vells i trencar l'app.
+  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL.map((url) => new Request(url, { cache: 'reload' })))));
   self.skipWaiting();
 });
 

@@ -116,11 +116,12 @@ export function normalize(text) {
 
 // Reconeix singular i plural a partir de qualsevol de les dues formes,
 // també el plural català en -es de les paraules en -a («pomes» → «poma»).
-function wordPattern(word) {
+export function wordPattern(word) {
   const n = normalize(word);
   const forms = new Set([n, `${n}s`, `${n}es`]);
   if (n.endsWith('es')) forms.add(n.slice(0, -2)).add(`${n.slice(0, -2)}a`);
   if (n.endsWith('s')) forms.add(n.slice(0, -1));
+  if (n.endsWith('a')) forms.add(`${n.slice(0, -1)}es`);
   const body = [...forms].map((f) => f.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
   return new RegExp(`(?:^|[^a-z0-9])(?:${body})(?:$|[^a-z0-9])`);
 }

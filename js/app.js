@@ -1,10 +1,13 @@
 import { connect, generateHomeCode, isDemo, normalizeCode, notificationsEnabled } from './store.js';
 import { mountShopping } from './shopping.js';
+import { mountWishes } from './wishes.js';
 import { ICONS, escapeHtml, toast } from './ui.js';
 
 const PROFILE_KEY = 'casa.perfil';
 const INSTALL_DISMISSED_KEY = 'casa.instalacion-descartada';
 const NOTIFY_DISMISSED_KEY = 'casa.avisos-descartats';
+const TAB_KEY = 'casa.pestanya';
+const TABS = ['compra', 'casa'];
 
 const app = document.getElementById('app');
 const isStandalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
@@ -246,8 +249,15 @@ function renderHome(backend, profile) {
       <div class="notice" id="offline" hidden><span>Sense connexió. Els canvis s'enviaran quan la recuperis.</span></div>
       <div class="notice" id="install-notice" hidden></div>
       <div class="notice" id="notify-notice" hidden></div>
-      <main id="view"></main>
-    </div>`;
+      <main>
+        <section id="view-compra" aria-label="Llista de la compra"></section>
+        <section id="view-casa" aria-label="Llista per a casa" hidden></section>
+      </main>
+    </div>
+    <nav class="tabbar" aria-label="Seccions">
+      <button class="tab" type="button" data-tab="compra" aria-label="Compra">${ICONS.cart}<span>Compra</span></button>
+      <button class="tab" type="button" data-tab="casa" aria-label="Per a casa">${ICONS.sofa}<span>Per a casa</span></button>
+    </nav>`;
 
   const offline = app.querySelector('#offline');
   const updateConnection = () => { offline.hidden = navigator.onLine; };
@@ -268,11 +278,28 @@ function renderHome(backend, profile) {
   app.querySelector('#share').addEventListener('click', () => shareInvite(profile.home));
   app.querySelector('#settings').addEventListener('click', () => renderSettings(backend, profile));
 
-  mountShopping(app.querySelector('#view'), {
-    store: backend.open(profile.home),
-    profile,
-    toast,
+  const store = backend.open(profile.home);
+  mountShopping(app.querySelector('#view-compra'), { store, profile, toast });
+  mountWishes(app.querySelector('#view-casa'), { store: store.wishes, profile, toast });
+
+  // Les dues seccions queden muntades i escoltant canvis; la pestanya només decideix quina es veu.
+  const showTab = (tab) => {
+    const active = TABS.includes(tab) ? tab : TABS[0];
+    TABS.forEach((name) => {
+      app.querySelector(`#view-${name}`).hidden = name !== active;
+      const button = app.querySelector(`.tab[data-tab="${name}"]`);
+      button.classList.toggle('active', name === active);
+      button.setAttribute('aria-current', name === active ? 'page' : 'false');
+    });
+    try { localStorage.setItem(TAB_KEY, active); } catch { /* sense emmagatzematge no es recorda la pestanya */ }
+  };
+  app.querySelector('.tabbar').addEventListener('click', (event) => {
+    const tab = event.target.closest('.tab')?.dataset.tab;
+    if (!tab) return;
+    showTab(tab);
+    scrollTo(0, 0);
   });
+  showTab(localStorage.getItem(TAB_KEY));
 }
 
 async function start() {

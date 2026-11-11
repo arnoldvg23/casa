@@ -36,7 +36,7 @@ function localBackend() {
 
   return {
     async createHome(code) {
-      localStorage.setItem(keyFor(code), JSON.stringify({ items: {}, history: {} }));
+      localStorage.setItem(keyFor(code), JSON.stringify({ items: {}, history: {}, wishes: {} }));
     },
     async homeExists(code) {
       return read(code) !== null;
@@ -53,11 +53,36 @@ function localBackend() {
         localStorage.setItem(keyFor(code), JSON.stringify(data));
         notify();
       };
+      // Les llars creades abans de la llista per a casa no tenen `wishes`.
+      const wishListeners = new Set();
+      const notifyWishes = () => {
+        const wishes = Object.values(read(code).wishes ?? {});
+        wishListeners.forEach((cb) => cb(wishes));
+      };
+      const mutateWishes = (change) => {
+        const data = read(code);
+        data.wishes ??= {};
+        change(data.wishes);
+        localStorage.setItem(keyFor(code), JSON.stringify(data));
+        notifyWishes();
+      };
       addEventListener('storage', (event) => {
-        if (event.key === keyFor(code)) notify();
+        if (event.key !== keyFor(code)) return;
+        notify();
+        notifyWishes();
       });
 
       return {
+        wishes: {
+          subscribe(cb) {
+            wishListeners.add(cb);
+            notifyWishes();
+          },
+          add: (wish) => mutateWishes((ws) => { const id = crypto.randomUUID(); ws[id] = { ...wish, id }; }),
+          update: (id, patch) => mutateWishes((ws) => { Object.assign(ws[id], patch); }),
+          removeMany: (list) => mutateWishes((ws) => { list.forEach((w) => delete ws[w.id]); }),
+          restoreMany: (list) => mutateWishes((ws) => { list.forEach((w) => { ws[w.id] = w; }); }),
+        },
         subscribe(cb) {
           listeners.add(cb);
           notify();
@@ -119,8 +144,27 @@ async function firebaseBackend() {
     open(code) {
       const items = fs.collection(homeRef(code), 'items');
       const history = fs.collection(homeRef(code), 'history');
+      // Col·lecció pròpia: la llista per a casa mai toca les dades de la compra.
+      const wishes = fs.collection(homeRef(code), 'wishes');
 
       return {
+        wishes: {
+          subscribe(cb) {
+            fs.onSnapshot(wishes, (snapshot) => cb(snapshot.docs.map((d) => ({ ...d.data(), id: d.id }))), console.error);
+          },
+          add: (wish) => report(fs.addDoc(wishes, { ...wish, uid: auth.currentUser.uid })),
+          update: (id, patch) => report(fs.updateDoc(fs.doc(wishes, id), patch)),
+          removeMany(list) {
+            const batch = fs.writeBatch(db);
+            list.forEach((w) => batch.delete(fs.doc(wishes, w.id)));
+            report(batch.commit());
+          },
+          restoreMany(list) {
+            const batch = fs.writeBatch(db);
+            list.forEach(({ id, ...wish }) => batch.set(fs.doc(wishes, id), wish));
+            report(batch.commit());
+          },
+        },
         subscribe(cb) {
           const state = { items: [], history: [] };
           const docs = (snapshot) => snapshot.docs.map((d) => ({ ...d.data(), id: d.id }));
