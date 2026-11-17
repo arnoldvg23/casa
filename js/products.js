@@ -14,6 +14,7 @@ export const CATEGORIES = [
       ['🥬', 'Espinacs', 'Espinacas'], ['🥦', 'Bròquil', 'Brócoli'], ['🥦', 'Coliflor'], ['🍄', 'Xampinyons', 'Champiñones'],
       ['🍄', 'Bolets', 'Setas'], ['🎃', 'Carbassa', 'Calabaza'], ['🥬', 'Porros', 'Puerros'], ['🫛', 'Mongetes verdes', 'Judías verdes'],
       ['🍎', 'Fruita', 'Fruta'], ['🥦', 'Verdura'], ['🥗', 'Amanida', 'Ensalada'], ['🌿', 'Julivert', 'Perejil'], ['🌿', 'Alfàbrega', 'Albahaca'],
+      ['🥔', 'Patates per fregir', 'Patatas para freír', 'Patatrs per fregir'], ['🍅', 'Tomàquets per sucar', 'Tomates para untar', 'Tomàquet per pintar'],
     ],
   },
   {
@@ -27,6 +28,7 @@ export const CATEGORIES = [
       ['🐟', 'Salmó', 'Salmón'], ['🐟', 'Lluç', 'Merluza'], ['🐟', 'Bacallà', 'Bacalao'], ['🐟', 'Tonyina fresca', 'Atún fresco'],
       ['🍤', 'Gambes', 'Gambas'], ['🍤', 'Llagostins', 'Langostinos'], ['🦪', 'Musclos', 'Mejillones'], ['🦑', 'Sípia', 'Sepia'],
       ['🦑', 'Calamars', 'Calamares'], ['🐟', 'Peix', 'Pescado'], ['🥩', 'Carn', 'Carne'],
+      ['🧆', 'Mandonguilles', 'Albóndigas'], ['🌯', 'Carn per a fajites', 'Carne para fajitas'],
     ],
   },
   {
@@ -35,6 +37,8 @@ export const CATEGORIES = [
       ['🥛', 'Llet', 'Leche'], ['🥚', 'Ous', 'Huevos'], ['🥣', 'Iogurts', 'Yogures'], ['🧀', 'Formatge', 'Queso'],
       ['🧀', 'Formatge ratllat', 'Queso rallado'], ['🧈', 'Mantega', 'Mantequilla'], ['🥛', 'Nata'], ['🥛', 'Quefir', 'Kéfir'],
       ['🍮', 'Natilles', 'Natillas'], ['🍮', 'Flam', 'Flan'], ['🧈', 'Margarina'],
+      ['🧀', 'Formatge per untar', 'Queso crema', 'Formatge crema', 'Philadelphia'], ['🧀', 'Mascarpone'],
+      ['🥛', 'Nata per muntar', 'Nata para montar', 'Nata per montar'],
     ],
   },
   {
@@ -42,6 +46,10 @@ export const CATEGORIES = [
     products: [
       ['🥖', 'Pa', 'Pan'], ['🍞', 'Pa de motlle', 'Pan de molde'], ['🥖', 'Barra de pa', 'Barra de pan'], ['🍞', 'Torrades', 'Tostadas'],
       ['🍪', 'Galetes', 'Galletas'], ['🧁', 'Magdalenes', 'Magdalenas'], ['🥐', 'Croissants'], ['🥐', 'Brioixeria', 'Bollería'], ['🥣', 'Cereals', 'Cereales'],
+      ['🥣', 'Granola'], ['🍪', 'Galetes Maria', 'Galletas María'], ['🦕', 'Galetes Dinosaurus', 'Dinosaurus', 'Dinosauris'],
+      ['🍘', 'Tortites', 'Tortitas'], ['🍫', 'Tortites de xocolata', 'Tortitas de chocolate'],
+      ['🫓', 'Tortilles per a fajites', 'Tortillas de trigo', 'Fajitas', 'Wraps'],
+      ['🍫', 'Crema de cacau', 'Crema de cacao', 'Nocilla', 'Nutella'],
     ],
   },
   {
@@ -51,12 +59,12 @@ export const CATEGORIES = [
       ['🍜', 'Fideus', 'Fideos'], ['🌾', 'Farina', 'Harina'], ['🍬', 'Sucre', 'Azúcar'], ['🧂', 'Sal'],
       ['🫒', 'Oli', 'Aceite'], ['🫒', "Oli d'oliva", 'Aceite de oliva'], ['🫙', 'Vinagre'], ['🫘', 'Llenties', 'Lentejas'],
       ['🫘', 'Cigrons', 'Garbanzos'], ['🫘', 'Mongetes', 'Alubias'], ['🥫', 'Tonyina', 'Atún'], ['🐟', 'Sardines', 'Sardinas'],
-      ['🥫', 'Tomàquet fregit', 'Tomate frito'], ['🫙', 'Maionesa', 'Mayonesa'], ['🫙', 'Quètxup', 'Ketchup'], ['🫙', 'Mostassa', 'Mostaza'],
+      ['🥫', 'Tomàquet fregit', 'Tomate frito', 'Tomàquet per fregir'], ['🫙', 'Maionesa', 'Mayonesa'], ['🫙', 'Quètxup', 'Ketchup'], ['🫙', 'Mostassa', 'Mostaza'],
       ['☕', 'Cafè', 'Café'], ['🍵', 'Te', 'Té'], ['🍵', 'Infusions', 'Infusiones'], ['🍫', 'Cacau', 'Cacao'],
-      ['🍫', 'Xocolata', 'Chocolate'], ['🍯', 'Mel', 'Miel'], ['🍯', 'Melmelada', 'Mermelada'], ['🌾', 'Llevat', 'Levadura'],
+      ['🍫', 'Xocolata', 'Chocolate', 'Xocolate', 'Xoco'], ['🍫', 'Xocolata negra', 'Chocolate negro', 'Xocolate negre', 'Xoco negre'], ['🍯', 'Mel', 'Miel'], ['🍯', 'Melmelada', 'Mermelada'], ['🌾', 'Llevat', 'Levadura'],
       ['🌶️', 'Espècies', 'Especias'], ['🌶️', 'Pebre', 'Pimienta'], ['🌿', 'Orenga', 'Orégano'], ['🍲', 'Brou', 'Caldo'],
       ['🫒', 'Olives', 'Aceitunas'], ['🍟', 'Patates fregides', 'Patatas fritas'], ['🥜', 'Fruits secs', 'Frutos secos'],
-      ['🌰', 'Ametlles', 'Almendras'], ['🌰', 'Nous', 'Nueces'],
+      ['🌰', 'Ametlles', 'Almendras'], ['🌰', 'Nous', 'Nueces'], ['🥑', 'Guacamole'],
     ],
   },
   {
@@ -70,7 +78,7 @@ export const CATEGORIES = [
   {
     id: 'bebidas', label: 'Begudes', icon: '🥤', color: '#4a78c4',
     products: [
-      ['💧', 'Aigua', 'Agua'], ['🧃', 'Suc', 'Zumo'], ['🥤', 'Refrescos'], ['🥤', 'Coca-Cola'],
+      ['💧', 'Aigua', 'Agua'], ['🧃', 'Suc', 'Zumo'], ['🥤', 'Refrescos'], ['🥤', 'Coca-Cola'], ['🥤', 'Coca-Cola Zero'], ['🥤', 'Aquarius'],
       ['🍺', 'Cervesa', 'Cerveza'], ['🍷', 'Vi', 'Vino'], ['🍾', 'Cava'], ['🥤', 'Tònica', 'Tónica'],
     ],
   },
@@ -90,6 +98,7 @@ export const CATEGORIES = [
       ['🪥', 'Raspall de dents', 'Cepillo de dientes'], ['🧴', 'Desodorant', 'Desodorante'], ['🌸', 'Compreses', 'Compresas'], ['🌸', 'Tampons', 'Tampones'],
       ['🤧', 'Mocadors', 'Pañuelos'], ['☀️', 'Crema solar'], ['🧴', 'Crema hidratant', 'Crema hidratante'], ['🪒', "Maquinetes d'afaitar", 'Maquinillas'],
       ['🧼', 'Sabó de mans', 'Jabón de manos'], ['☁️', 'Cotó', 'Algodón'], ['🩹', 'Tiretes', 'Tiritas'],
+      ['🫧', 'Colutori', 'Colutorio', 'Colotori', 'Colotorio', 'Enjuague bucal'],
     ],
   },
   {
@@ -114,14 +123,19 @@ export function normalize(text) {
     .trim();
 }
 
+// Un singular deduït no pot ser una partícula: «peres» → «per» feia que
+// «patates per fregir» sortís amb icona de pera.
+const LINKING_WORDS = new Set(['per', 'de', 'del', 'amb', 'para', 'con', 'les', 'els', 'la', 'el']);
+
 // Reconeix singular i plural a partir de qualsevol de les dues formes,
 // també el plural català en -es de les paraules en -a («pomes» → «poma»).
 export function wordPattern(word) {
   const n = normalize(word);
   const forms = new Set([n, `${n}s`, `${n}es`]);
-  if (n.endsWith('es')) forms.add(n.slice(0, -2)).add(`${n.slice(0, -2)}a`);
-  if (n.endsWith('s')) forms.add(n.slice(0, -1));
-  if (n.endsWith('a')) forms.add(`${n.slice(0, -1)}es`);
+  const derived = (form) => { if (!LINKING_WORDS.has(form)) forms.add(form); };
+  if (n.endsWith('es')) { derived(n.slice(0, -2)); derived(`${n.slice(0, -2)}a`); }
+  if (n.endsWith('s')) derived(n.slice(0, -1));
+  if (n.endsWith('a')) derived(`${n.slice(0, -1)}es`);
   const body = [...forms].map((f) => f.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
   return new RegExp(`(?:^|[^a-z0-9])(?:${body})(?:$|[^a-z0-9])`);
 }
