@@ -1,6 +1,6 @@
 // Abre la app al instante y sin cobertura: sirve la copia guardada y actualiza
 // en segundo plano, así que una versión nueva se ve en la siguiente apertura.
-const CACHE = 'casa-v4';
+const CACHE = 'casa-v5';
 const SHELL = [
   './',
   'index.html',
@@ -8,6 +8,7 @@ const SHELL = [
   'manifest.webmanifest',
   'js/app.js',
   'js/firebase-config.js',
+  'js/gifts.js',
   'js/habits.js',
   'js/products.js',
   'js/shopping.js',

@@ -13,6 +13,9 @@ export const ICONS = {
   invite: line('<path d="M15 20v-1.5a4.5 4.5 0 0 0-4.5-4.5h-4A4.5 4.5 0 0 0 2 18.5V20"/><circle cx="8.5" cy="7.5" r="3.5"/><path d="M19 8v6M16 11h6"/>'),
   basket: line('<path d="M3 10h18l-1.6 8.4a2 2 0 0 1-2 1.6H6.6a2 2 0 0 1-2-1.6L3 10Z"/><path d="m8 10 3-6M16 10l-3-6M9 14v2.5M12 14v2.5M15 14v2.5"/>'),
   sofa: line('<path d="M4 11V8a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v3"/><path d="M2 13a2 2 0 0 1 4 0v1h12v-1a2 2 0 0 1 4 0v4a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1z"/><path d="M5 18v2M19 18v2"/>'),
+  gift: line('<rect x="3.5" y="8" width="17" height="4" rx="1"/><path d="M5 12v7a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-7M12 8v12M12 8c-1.5-3-5-4-5.5-2S9 8 12 8Zm0 0c1.5-3 5-4 5.5-2S15 8 12 8Z"/>'),
+  tree: line('<path d="M12 3 6.5 10H9l-4 5.5h4.5L6 20h12l-3.5-4.5H19L15 10h2.5L12 3Z"/><path d="M12 20v1.5"/>'),
+  link: line('<path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/>'),
   cart: line('<circle cx="9" cy="20" r="1.4"/><circle cx="17" cy="20" r="1.4"/><path d="M3 4h2.2l2.4 11.2a1.5 1.5 0 0 0 1.5 1.2h7.6a1.5 1.5 0 0 0 1.5-1.2L19.5 8H6"/>'),
 };
 

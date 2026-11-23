@@ -1,13 +1,14 @@
 import { connect, generateHomeCode, isDemo, normalizeCode, notificationsEnabled } from './store.js';
 import { mountShopping } from './shopping.js';
 import { mountWishes } from './wishes.js';
+import { mountGifts } from './gifts.js';
 import { ICONS, escapeHtml, toast } from './ui.js';
 
 const PROFILE_KEY = 'casa.perfil';
 const INSTALL_DISMISSED_KEY = 'casa.instalacion-descartada';
 const NOTIFY_DISMISSED_KEY = 'casa.avisos-descartats';
 const TAB_KEY = 'casa.pestanya';
-const TABS = ['compra', 'casa'];
+const TABS = ['compra', 'casa', 'nadal'];
 
 const app = document.getElementById('app');
 const isStandalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
@@ -252,11 +253,13 @@ function renderHome(backend, profile) {
       <main>
         <section id="view-compra" aria-label="Llista de la compra"></section>
         <section id="view-casa" aria-label="Llista per a casa" hidden></section>
+        <section id="view-nadal" aria-label="Llista de Nadal" hidden></section>
       </main>
     </div>
     <nav class="tabbar" aria-label="Seccions">
       <button class="tab" type="button" data-tab="compra" aria-label="Compra">${ICONS.cart}<span>Compra</span></button>
       <button class="tab" type="button" data-tab="casa" aria-label="Per a casa">${ICONS.sofa}<span>Per a casa</span></button>
+      <button class="tab" type="button" data-tab="nadal" aria-label="Nadal">${ICONS.gift}<span>Nadal</span></button>
     </nav>`;
 
   const offline = app.querySelector('#offline');
@@ -281,8 +284,9 @@ function renderHome(backend, profile) {
   const store = backend.open(profile.home);
   mountShopping(app.querySelector('#view-compra'), { store, profile, toast });
   mountWishes(app.querySelector('#view-casa'), { store: store.wishes, profile, toast });
+  mountGifts(app.querySelector('#view-nadal'), { store: store.gifts, profile, toast });
 
-  // Les dues seccions queden muntades i escoltant canvis; la pestanya només decideix quina es veu.
+  // Les seccions queden muntades i escoltant canvis; la pestanya només decideix quina es veu.
   const showTab = (tab) => {
     const active = TABS.includes(tab) ? tab : TABS[0];
     TABS.forEach((name) => {

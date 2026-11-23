@@ -27,6 +27,16 @@ export function normalizeCode(input) {
 
 const historyKey = (name) => encodeURIComponent(normalize(name)).slice(0, 200);
 
+// En mode de prova cada navegador fa de membre diferent, com l'usuari anònim de Firebase.
+function localUid() {
+  let uid = localStorage.getItem('casa.uid');
+  if (!uid) {
+    uid = crypto.randomUUID();
+    localStorage.setItem('casa.uid', uid);
+  }
+  return uid;
+}
+
 function localBackend() {
   const keyFor = (code) => `casa.datos.${code}`;
   const read = (code) => {
@@ -36,7 +46,7 @@ function localBackend() {
 
   return {
     async createHome(code) {
-      localStorage.setItem(keyFor(code), JSON.stringify({ items: {}, history: {}, wishes: {} }));
+      localStorage.setItem(keyFor(code), JSON.stringify({ items: {}, history: {}, wishes: {}, gifts: {}, members: {} }));
     },
     async homeExists(code) {
       return read(code) !== null;
@@ -66,13 +76,42 @@ function localBackend() {
         localStorage.setItem(keyFor(code), JSON.stringify(data));
         notifyWishes();
       };
+      // Igual que `wishes`: les llars anteriors a Nadal no tenen `gifts` ni `members`.
+      const uid = localUid();
+      const giftListeners = new Set();
+      const notifyGifts = () => {
+        const data = read(code);
+        const state = { gifts: Object.values(data.gifts ?? {}), members: Object.values(data.members ?? {}) };
+        giftListeners.forEach((cb) => cb(state));
+      };
+      const mutateGifts = (change) => {
+        const data = read(code);
+        data.gifts ??= {};
+        data.members ??= {};
+        change(data);
+        localStorage.setItem(keyFor(code), JSON.stringify(data));
+        notifyGifts();
+      };
       addEventListener('storage', (event) => {
         if (event.key !== keyFor(code)) return;
         notify();
         notifyWishes();
+        notifyGifts();
       });
 
       return {
+        gifts: {
+          uid,
+          subscribe(cb) {
+            giftListeners.add(cb);
+            notifyGifts();
+          },
+          join: (name) => mutateGifts((d) => { d.members[uid] = { id: uid, name, updatedAt: Date.now() }; }),
+          add: (gift) => mutateGifts((d) => { const id = crypto.randomUUID(); d.gifts[id] = { ...gift, uid, id }; }),
+          update: (id, patch) => mutateGifts((d) => { Object.assign(d.gifts[id], patch); }),
+          remove: (gift) => mutateGifts((d) => { delete d.gifts[gift.id]; }),
+          restore: (gift) => mutateGifts((d) => { d.gifts[gift.id] = gift; }),
+        },
         wishes: {
           subscribe(cb) {
             wishListeners.add(cb);
@@ -146,8 +185,28 @@ async function firebaseBackend() {
       const history = fs.collection(homeRef(code), 'history');
       // Col·lecció pròpia: la llista per a casa mai toca les dades de la compra.
       const wishes = fs.collection(homeRef(code), 'wishes');
+      // Nadal també té col·leccions pròpies. Cada regal porta l'uid de qui l'ha
+      // afegit i les regles només deixen que aquest uid el canviï o l'esborri.
+      const gifts = fs.collection(homeRef(code), 'gifts');
+      const members = fs.collection(homeRef(code), 'members');
+      const uid = auth.currentUser.uid;
 
       return {
+        gifts: {
+          uid,
+          subscribe(cb) {
+            const state = { gifts: [], members: [] };
+            const docs = (snapshot) => snapshot.docs.map((d) => ({ ...d.data(), id: d.id }));
+            fs.onSnapshot(gifts, (snapshot) => { state.gifts = docs(snapshot); cb({ ...state }); }, console.error);
+            fs.onSnapshot(members, (snapshot) => { state.members = docs(snapshot); cb({ ...state }); }, console.error);
+          },
+          // Així cada membre té la seva secció encara que no hagi afegit res.
+          join: (name) => report(fs.setDoc(fs.doc(members, uid), { name, updatedAt: Date.now() })),
+          add: (gift) => report(fs.addDoc(gifts, { ...gift, uid })),
+          update: (id, patch) => report(fs.updateDoc(fs.doc(gifts, id), patch)),
+          remove: (gift) => report(fs.deleteDoc(fs.doc(gifts, gift.id))),
+          restore: ({ id, ...gift }) => report(fs.setDoc(fs.doc(gifts, id), gift)),
+        },
         wishes: {
           subscribe(cb) {
             fs.onSnapshot(wishes, (snapshot) => cb(snapshot.docs.map((d) => ({ ...d.data(), id: d.id }))), console.error);

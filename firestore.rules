@@ -1,6 +1,12 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function validGift(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() <= 80
+        && (!('link' in data) || (data.link is string && data.link.size() <= 1000))
+        && (!('photo' in data) || (data.photo is string && data.photo.size() <= 700000));
+    }
+
     // Nadie puede listar los hogares: para entrar hay que conocer el código.
     match /households/{home} {
       allow get, create: if request.auth != null;
@@ -13,6 +19,24 @@ service cloud.firestore {
       }
       match /wishes/{wish} {
         allow read, write: if request.auth != null;
+      }
+      // Nadal: todos leen todas las listas, pero cada regalo solo lo crea,
+      // cambia o borra el dispositivo que lo añadió (su uid no puede cambiar).
+      match /gifts/{gift} {
+        allow read: if request.auth != null;
+        allow create: if request.auth != null
+          && request.resource.data.uid == request.auth.uid
+          && validGift(request.resource.data);
+        allow update: if request.auth != null
+          && resource.data.uid == request.auth.uid
+          && request.resource.data.uid == request.auth.uid
+          && validGift(request.resource.data);
+        allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
+      }
+      // Cada miembro solo escribe su propio nombre: así tiene su sección aunque esté vacía.
+      match /members/{uid} {
+        allow read: if request.auth != null;
+        allow write: if request.auth != null && request.auth.uid == uid;
       }
       // Cada dispositivo solo escribe su propio token; solo el servidor los lee.
       match /devices/{uid} {
