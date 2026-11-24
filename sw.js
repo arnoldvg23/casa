@@ -1,6 +1,6 @@
 // Abre la app al instante y sin cobertura: sirve la copia guardada y actualiza
 // en segundo plano, así que una versión nueva se ve en la siguiente apertura.
-const CACHE = 'casa-v5';
+const CACHE = 'casa-v6';
 const SHELL = [
   './',
   'index.html',

@@ -319,6 +319,7 @@ dialog.sheet::backdrop { background: rgb(0 0 0 / 40%); }
 .file-btn:focus-within { outline: 2px solid var(--brand); outline-offset: 2px; }
 .gift-photo { width: 100%; max-height: 50dvh; object-fit: contain; border-radius: 14px; background: var(--surface); }
 a.btn { display: grid; place-items: center; text-decoration: none; }
+.welcome .link-btn, .sheet .link-btn { justify-self: center; align-self: center; }
 .sheet .error { margin: 0 2px; color: var(--danger); font-size: 13px; }
 
 /* Toast */

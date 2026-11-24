@@ -7,6 +7,11 @@ service cloud.firestore {
         && (!('photo' in data) || (data.photo is string && data.photo.size() <= 700000));
     }
 
+    // Perfil de cada cuenta (nombre y hogar): solo lo lee y escribe su dueño.
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
     // Nadie puede listar los hogares: para entrar hay que conocer el código.
     match /households/{home} {
       allow get, create: if request.auth != null;
