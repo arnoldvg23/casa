@@ -37,6 +37,53 @@ function localUid() {
   return uid;
 }
 
+// Comptes del mode de prova: imiten Firebase (crear el compte conserva l'uid
+// del dispositiu; entrar-hi el substitueix pel del compte).
+function localAccounts() {
+  const KEY = 'casa.comptes';
+  const all = () => JSON.parse(localStorage.getItem(KEY) ?? '{}');
+  const save = (data) => localStorage.setItem(KEY, JSON.stringify(data));
+  const fail = (code) => { throw Object.assign(new Error(code), { code }); };
+  // Ni en mode de prova es desa la contrasenya: només un hash amb sal.
+  const hash = async (password, salt) => {
+    const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`${salt}:${password}`));
+    return [...new Uint8Array(bytes)].map((b) => b.toString(16).padStart(2, '0')).join('');
+  };
+  const findByUid = (uid) => Object.entries(all()).find(([, a]) => a.uid === uid);
+
+  return {
+    current() {
+      const found = findByUid(localUid());
+      return found ? { email: found[0], anonymous: false } : { email: null, anonymous: true };
+    },
+    async create(email, password, profile) {
+      const accounts = all();
+      if (accounts[email]) fail('auth/email-already-in-use');
+      if (password.length < 6) fail('auth/weak-password');
+      const salt = crypto.randomUUID();
+      accounts[email] = { salt, hash: await hash(password, salt), uid: localUid(), profile };
+      save(accounts);
+    },
+    async signIn(email, password) {
+      const account = all()[email];
+      if (!account || account.hash !== await hash(password, account.salt)) fail('auth/invalid-credential');
+      localStorage.setItem('casa.uid', account.uid);
+      return account.profile ?? null;
+    },
+    remember(profile) {
+      const found = findByUid(localUid());
+      if (!found) return;
+      const accounts = all();
+      accounts[found[0]].profile = profile;
+      save(accounts);
+    },
+    async signOut() {
+      localStorage.removeItem('casa.uid');
+    },
+    async resetPassword() {},
+  };
+}
+
 function localBackend() {
   const keyFor = (code) => `casa.datos.${code}`;
   const read = (code) => {
@@ -45,6 +92,7 @@ function localBackend() {
   };
 
   return {
+    account: localAccounts(),
     async createHome(code) {
       localStorage.setItem(keyFor(code), JSON.stringify({ items: {}, history: {}, wishes: {}, gifts: {}, members: {} }));
     },
@@ -158,12 +206,49 @@ async function firebaseBackend() {
     localCache: fs.persistentLocalCache({ tabManager: fs.persistentMultipleTabManager() }),
   });
   const homeRef = (code) => fs.doc(db, 'households', code);
+  // Perfil del compte (nom i llar): és el que permet tornar a entrar des d'un
+  // altre mòbil. Les regles només deixen llegir-lo i escriure'l al seu uid.
+  const userRef = (uid) => fs.doc(db, 'users', uid);
 
   // Sin conexión, una escritura no se resuelve hasta volver a tener red, así
   // que estos métodos no se esperan: solo se registra si el servidor la rechaza.
   const report = (promise) => promise.catch((error) => console.error('Firestore', error));
 
+  auth.languageCode = 'ca';
+  const account = {
+    current() {
+      const user = auth.currentUser;
+      return { email: user?.email ?? null, anonymous: !user || user.isAnonymous };
+    },
+    // Converteix l'usuari anònim d'aquest mòbil en un compte amb correu: l'uid
+    // no canvia, així que tot el que ja havia afegit continua sent seu.
+    async create(email, password, profile) {
+      const credential = authSdk.EmailAuthProvider.credential(email, password);
+      await authSdk.linkWithCredential(auth.currentUser, credential);
+      await fs.setDoc(userRef(auth.currentUser.uid), { ...profile, updatedAt: Date.now() });
+    },
+    // Entrar en un compte substitueix l'usuari anònim d'aquest mòbil.
+    // Si aquell anònim ja s'havia apuntat a Nadal, se'n treu la secció buida.
+    async signIn(email, password, homeToLeave) {
+      const previous = auth.currentUser;
+      if (previous?.isAnonymous && homeToLeave) {
+        await fs.deleteDoc(fs.doc(homeRef(homeToLeave), 'members', previous.uid)).catch(() => {});
+      }
+      const { user } = await authSdk.signInWithEmailAndPassword(auth, email, password);
+      const saved = await fs.getDoc(userRef(user.uid));
+      return saved.exists() ? saved.data() : null;
+    },
+    remember(profile) {
+      if (auth.currentUser && !auth.currentUser.isAnonymous) {
+        report(fs.setDoc(userRef(auth.currentUser.uid), { ...profile, updatedAt: Date.now() }, { merge: true }));
+      }
+    },
+    signOut: () => authSdk.signOut(auth),
+    resetPassword: (email) => authSdk.sendPasswordResetEmail(auth, email),
+  };
+
   return {
+    account,
     async createHome(code) {
       await fs.setDoc(homeRef(code), { createdAt: Date.now() });
     },

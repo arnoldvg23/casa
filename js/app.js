@@ -37,6 +37,102 @@ function saveProfile(profile) {
   localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
 }
 
+const ACCOUNT_ERRORS = {
+  'auth/email-already-in-use': 'Ja hi ha un compte amb aquest correu. Prova «Ja tinc compte».',
+  'auth/credential-already-in-use': 'Ja hi ha un compte amb aquest correu. Prova «Ja tinc compte».',
+  'auth/invalid-email': 'Aquest correu no és vàlid.',
+  'auth/weak-password': 'La contrasenya ha de tenir almenys 6 caràcters.',
+  'auth/missing-password': 'Escriu la contrasenya.',
+  'auth/invalid-credential': 'El correu o la contrasenya no són correctes.',
+  'auth/wrong-password': 'El correu o la contrasenya no són correctes.',
+  'auth/user-not-found': 'El correu o la contrasenya no són correctes.',
+  'auth/too-many-requests': 'Massa intents. Espera una estona i torna-ho a provar.',
+  'auth/network-request-failed': 'Necessites connexió per fer això.',
+  'auth/operation-not-allowed': 'Els comptes encara no estan activats a Firebase.',
+};
+
+const accountError = (error) => ACCOUNT_ERRORS[error?.code] ?? "No s'ha pogut fer. Torna-ho a provar.";
+
+// Full per crear un compte o entrar-hi. `onDone` rep el perfil desat al compte
+// (nom i llar) quan s'hi entra, o null quan es crea.
+function openAccountSheet(backend, { mode, profile, onDone }) {
+  const sheet = document.createElement('dialog');
+  sheet.className = 'sheet';
+  document.body.append(sheet);
+
+  const render = () => {
+    const creating = mode === 'create';
+    sheet.innerHTML = `
+      <form class="sheet-body" id="account-form" novalidate>
+        <h2>${creating ? 'Crea el teu compte' : 'Entra al teu compte'}</h2>
+        <p>${creating
+          ? "Així no perds les teves coses si canvies de mòbil, i hi pots entrar des d'un altre."
+          : 'Recuperaràs la teva llar i tot el que hi havies afegit.'}</p>
+        <label class="field"><span>Correu</span><input id="account-email" type="email" autocomplete="email" autocapitalize="none" spellcheck="false" required></label>
+        <label class="field"><span>Contrasenya${creating ? ' (mínim 6 caràcters)' : ''}</span><input id="account-password" type="password" minlength="6" autocomplete="${creating ? 'new-password' : 'current-password'}" required></label>
+        <p class="error" id="account-error" role="alert" hidden></p>
+        <button class="btn" type="submit" id="account-submit">${creating ? 'Crea el compte' : 'Entra'}</button>
+        ${creating ? '' : '<button class="btn secondary" type="button" id="account-reset">He oblidat la contrasenya</button>'}
+        <button class="btn secondary" type="button" id="account-switch">${creating ? 'Ja tinc compte' : 'Encara no tinc compte'}</button>
+        <button class="btn danger" type="button" id="account-cancel">Cancel·la</button>
+      </form>`;
+
+    const email = sheet.querySelector('#account-email');
+    const password = sheet.querySelector('#account-password');
+    const error = sheet.querySelector('#account-error');
+    const fail = (message) => { error.textContent = message; error.hidden = false; };
+
+    sheet.querySelector('#account-switch').addEventListener('click', () => {
+      mode = creating ? 'login' : 'create';
+      render();
+    });
+    sheet.querySelector('#account-cancel').addEventListener('click', () => sheet.close());
+    sheet.querySelector('#account-reset')?.addEventListener('click', async () => {
+      if (!email.value.trim()) {
+        fail('Escriu el teu correu i et enviarem un enllaç per canviar-la.');
+        email.focus();
+        return;
+      }
+      try {
+        await backend.account.resetPassword(email.value.trim());
+        toast("T'hem enviat un correu per canviar la contrasenya");
+      } catch (problem) {
+        fail(accountError(problem));
+      }
+    });
+    sheet.querySelector('#account-form').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      error.hidden = true;
+      const submit = sheet.querySelector('#account-submit');
+      submit.disabled = true;
+      try {
+        if (creating) {
+          await backend.account.create(email.value.trim(), password.value, profile);
+          sheet.close();
+          toast('Compte creat');
+          onDone(null);
+        } else {
+          const saved = await backend.account.signIn(email.value.trim(), password.value, profile?.home);
+          sheet.close();
+          onDone(saved);
+        }
+      } catch (problem) {
+        console.error(problem);
+        fail(accountError(problem));
+      } finally {
+        submit.disabled = false;
+      }
+    });
+  };
+
+  render();
+  sheet.addEventListener('click', (event) => {
+    if (event.target === sheet) sheet.close();
+  });
+  sheet.addEventListener('close', () => sheet.remove());
+  sheet.showModal();
+}
+
 function renderWelcome(backend) {
   const invited = new URLSearchParams(location.search).get('llar');
 
@@ -50,6 +146,7 @@ function renderWelcome(backend) {
       <label class="field"><span>Codi de la llar</span><input id="code" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCD-EFGH-JKMN" value="${escapeHtml(invited ? normalizeCode(invited) : '')}"></label>
       <button class="btn ${invited ? '' : 'secondary'}" id="join" type="button">Uneix-me amb el codi</button>
       <p class="error" id="error" role="alert" hidden></p>
+      <button class="link-btn" id="login" type="button">Ja tinc compte: entra-hi</button>
     </main>`;
 
   const nameInput = app.querySelector('#name');
@@ -82,6 +179,21 @@ function renderWelcome(backend) {
       button.disabled = false;
     }
   }
+
+  app.querySelector('#login').addEventListener('click', () => openAccountSheet(backend, {
+    mode: 'login',
+    onDone(saved) {
+      if (saved?.home) {
+        const profile = { name: saved.name || 'Jo', home: saved.home };
+        saveProfile(profile);
+        history.replaceState(null, '', location.pathname);
+        renderHome(backend, profile);
+        return;
+      }
+      toast('Ja has entrat. Ara crea la llar o uneix-te amb el codi.');
+      if (saved?.name && !nameInput.value) nameInput.value = saved.name;
+    },
+  }));
 
   app.querySelector('#create')?.addEventListener('click', (event) => enter(async () => {
     const code = generateHomeCode();
@@ -196,17 +308,25 @@ async function shareInvite(code) {
 
 function renderSettings(backend, profile) {
   const showNotify = canNotify(backend) && Notification.permission !== 'granted';
+  const account = backend.account.current();
+  const accountBlock = account.anonymous
+    ? `<p>Ara les teves coses només són en aquest mòbil. Crea un compte per no perdre-les i entrar-hi des d'un altre.</p>
+      <button class="btn secondary" type="button" id="account-create">Crea el teu compte</button>
+      <button class="link-btn" type="button" id="account-login">Ja tinc compte: entra-hi</button>`
+    : `<p>Has entrat com a <strong>${escapeHtml(account.email ?? '')}</strong>.</p>`;
   const sheet = document.createElement('dialog');
   sheet.className = 'sheet';
   sheet.innerHTML = `
     <div class="sheet-body">
       <h2>La teva llar</h2>
       <label class="field"><span>El teu nom</span><input id="profile-name" maxlength="30" value="${escapeHtml(profile.name)}"></label>
+      ${accountBlock}
       <p>Comparteix aquest codi amb la família:</p>
       <div class="code">${escapeHtml(profile.home)}</div>
       <button class="btn dark" type="button" id="invite">Convida la família</button>
       ${showNotify ? '<button class="btn secondary" type="button" id="notify">Activa les notificacions</button>' : ''}
       <button class="btn secondary" type="button" id="close">Fet</button>
+      ${account.anonymous ? '' : '<button class="btn danger" type="button" id="logout">Tanca la sessió</button>'}
       <button class="btn danger" type="button" id="leave">Surt d'aquesta llar</button>
     </div>`;
   document.body.append(sheet);
@@ -219,9 +339,33 @@ function renderSettings(backend, profile) {
   sheet.addEventListener('click', (event) => {
     if (event.target === sheet) sheet.close();
   });
-  sheet.querySelector('#leave').addEventListener('click', () => {
+  sheet.querySelector('#account-create')?.addEventListener('click', () => {
+    sheet.close();
+    openAccountSheet(backend, { mode: 'create', profile: { name: profile.name, home: profile.home }, onDone() {} });
+  });
+  sheet.querySelector('#account-login')?.addEventListener('click', () => {
+    sheet.close();
+    openAccountSheet(backend, {
+      mode: 'login',
+      profile,
+      // Cada secció escolta amb l'uid de qui ha obert l'app: es torna a carregar amb el del compte.
+      onDone(saved) {
+        saveProfile(saved?.home ? { name: saved.name || profile.name, home: saved.home } : profile);
+        location.reload();
+      },
+    });
+  });
+  sheet.querySelector('#logout')?.addEventListener('click', async () => {
+    if (!confirm("Sortiràs del compte en aquest mòbil. Hi podràs tornar a entrar amb el correu i la contrasenya.")) return;
+    await backend.account.signOut();
+    localStorage.removeItem(PROFILE_KEY);
+    location.reload();
+  });
+  sheet.querySelector('#leave').addEventListener('click', async () => {
     if (!confirm('Deixaràs de veure aquesta llista en aquest mòbil. Hi podràs tornar amb el codi.')) return;
     localStorage.removeItem(PROFILE_KEY);
+    // Amb compte, sortir de la llar també tanca la sessió en aquest mòbil.
+    if (!backend.account.current().anonymous) await backend.account.signOut();
     location.reload();
   });
   sheet.addEventListener('close', () => {
@@ -281,6 +425,7 @@ function renderHome(backend, profile) {
   app.querySelector('#share').addEventListener('click', () => shareInvite(profile.home));
   app.querySelector('#settings').addEventListener('click', () => renderSettings(backend, profile));
 
+  backend.account.remember({ name: profile.name, home: profile.home });
   const store = backend.open(profile.home);
   mountShopping(app.querySelector('#view-compra'), { store, profile, toast });
   mountWishes(app.querySelector('#view-casa'), { store: store.wishes, profile, toast });
