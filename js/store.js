@@ -147,7 +147,32 @@ function localBackend() {
         notifyGifts();
       });
 
+      // Finances: fora de la llar i per uid, com a Firebase.
+      const financeKey = () => `casa.finances.${localUid()}`;
+      const financeListeners = new Set();
+      const readFinances = () => JSON.parse(localStorage.getItem(financeKey()) ?? '{}');
+      const notifyFinances = () => {
+        const all = Object.values(readFinances());
+        financeListeners.forEach((cb) => cb(all));
+      };
+      const mutateFinances = (change) => {
+        const data = readFinances();
+        change(data);
+        localStorage.setItem(financeKey(), JSON.stringify(data));
+        notifyFinances();
+      };
+
       return {
+        finances: {
+          subscribe(cb) {
+            financeListeners.add(cb);
+            notifyFinances();
+          },
+          add: (m) => mutateFinances((d) => { const id = crypto.randomUUID(); d[id] = { ...m, id }; }),
+          update: (id, patch) => mutateFinances((d) => { Object.assign(d[id], patch); }),
+          remove: (m) => mutateFinances((d) => { delete d[m.id]; }),
+          restore: (m) => mutateFinances((d) => { d[m.id] = m; }),
+        },
         gifts: {
           uid,
           subscribe(cb) {
@@ -275,8 +300,19 @@ async function firebaseBackend() {
       const gifts = fs.collection(homeRef(code), 'gifts');
       const members = fs.collection(homeRef(code), 'members');
       const uid = auth.currentUser.uid;
+      // Finances personals: sota el compte, no sota la llar. Ningú més les pot llegir.
+      const movements = fs.collection(userRef(uid), 'movements');
 
       return {
+        finances: {
+          subscribe(cb) {
+            fs.onSnapshot(movements, (snapshot) => cb(snapshot.docs.map((d) => ({ ...d.data(), id: d.id }))), console.error);
+          },
+          add: (m) => report(fs.addDoc(movements, m)),
+          update: (id, patch) => report(fs.updateDoc(fs.doc(movements, id), patch)),
+          remove: (m) => report(fs.deleteDoc(fs.doc(movements, m.id))),
+          restore: ({ id, ...m }) => report(fs.setDoc(fs.doc(movements, id), m)),
+        },
         gifts: {
           uid,
           subscribe(cb) {

@@ -7,9 +7,24 @@ service cloud.firestore {
         && (!('photo' in data) || (data.photo is string && data.photo.size() <= 700000));
     }
 
+    function validMovement(data) {
+      return data.type in ['in', 'out']
+        && data.amount is int && data.amount > 0 && data.amount <= 100000000
+        && data.category is string && data.category.size() <= 30
+        && data.date is string && data.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && (!('note' in data) || (data.note is string && data.note.size() <= 140));
+    }
+
     // Perfil de cada cuenta (nombre y hogar): solo lo lee y escribe su dueño.
     match /users/{uid} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
+
+      // Finances: privadas. Ni la familia ni nadie más puede leerlas.
+      match /movements/{movement} {
+        allow read, delete: if request.auth != null && request.auth.uid == uid;
+        allow create, update: if request.auth != null && request.auth.uid == uid
+          && validMovement(request.resource.data);
+      }
     }
 
     // Nadie puede listar los hogares: para entrar hay que conocer el código.
