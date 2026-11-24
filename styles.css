@@ -261,7 +261,7 @@ dialog.sheet::backdrop { background: rgb(0 0 0 / 40%); }
 /* Pestanyes */
 .tabbar {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
-  display: grid; grid-template-columns: repeat(3, minmax(0, 140px)); justify-content: center; gap: 8px;
+  display: grid; grid-template-columns: repeat(4, minmax(0, 120px)); justify-content: center; gap: 8px;
   padding: 6px 16px calc(env(safe-area-inset-bottom) + 6px);
   background: var(--surface); border-top: 1px solid var(--line);
 }
@@ -338,3 +338,25 @@ a.btn { display: grid; place-items: center; text-decoration: none; }
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
+
+/* Finances */
+.month-nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.month-nav h2 { margin: 0; font-size: 17px; font-weight: 700; }
+.flip { display: grid; transform: scaleX(-1); }
+.fin-stats .stat { min-height: 84px; }
+.fin-stats .stat-main { grid-column: 1 / -1; }
+.fin-stats .stat strong { font-size: 24px; overflow-wrap: anywhere; }
+.fin-stats .stat-main strong { font-size: 32px; }
+.money-in { color: #4f8a5c; }
+.money-out { color: var(--danger); }
+.segmented.two { grid-template-columns: 1fr 1fr; }
+.amount { flex: none; padding: 0 14px 0 8px; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.cat-list { gap: 0; padding: 4px 12px; background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); }
+.cat-row { display: flex; align-items: center; gap: 12px; padding: 8px 0; }
+.cat-row + .cat-row { border-top: 1px solid var(--line); }
+.cat-icon { flex: none; font-size: 22px; }
+.cat-text { flex: 1; min-width: 0; display: grid; gap: 5px; }
+.cat-line { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; font-variant-numeric: tabular-nums; }
+.cat-line b { font-weight: 600; }
+.cat-bar { height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
+.cat-bar i { display: block; height: 100%; border-radius: 3px; background: var(--brand); }
