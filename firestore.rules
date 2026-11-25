@@ -7,11 +7,15 @@ service cloud.firestore {
         && (!('photo' in data) || (data.photo is string && data.photo.size() <= 700000));
     }
 
+    // Finances: una secció i un concepte (o el format antic de tipus i categoria).
     function validMovement(data) {
-      return data.type in ['in', 'out']
-        && data.amount is int && data.amount > 0 && data.amount <= 100000000
-        && data.category is string && data.category.size() <= 30
+      return data.amount is int && data.amount > 0 && data.amount <= 100000000
         && data.date is string && data.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && (
+          (data.section in ['menjar', 'fixes', 'compres', 'extres', 'ingressos', 'estalvis']
+            && data.name is string && data.name.size() > 0 && data.name.size() <= 80)
+          || (data.type in ['in', 'out'] && data.category is string && data.category.size() <= 30)
+        )
         && (!('note' in data) || (data.note is string && data.note.size() <= 140));
     }
 
