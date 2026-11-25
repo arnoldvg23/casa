@@ -381,11 +381,21 @@ function renderSettings(backend, profile) {
   sheet.showModal();
 }
 
+function greeting() {
+  const hour = new Date().getHours();
+  if (hour >= 6 && hour < 14) return 'Bon dia,';
+  if (hour >= 14 && hour < 21) return 'Bona tarda,';
+  return 'Bona nit,';
+}
+
 function renderHome(backend, profile) {
   app.innerHTML = `
     <div class="shell">
       <header class="topbar">
-        <h1>Hola, ${escapeHtml(profile.name)}!</h1>
+        <div class="hello">
+          <small>${greeting()}</small>
+          <h1>${escapeHtml(profile.name)}</h1>
+        </div>
         <div class="topbar-actions">
           <button class="round-btn" type="button" id="share" aria-label="Convida la família">${ICONS.invite}</button>
           <button class="round-btn" type="button" id="settings" aria-label="Ajustos de la llar">${ICONS.settings}</button>

@@ -4,12 +4,12 @@ import { ICONS, escapeHtml } from './ui.js';
 // quatre seccions de despeses, una d'ingressos i una d'estalvis. Cada compte
 // només veu els seus moviments (users/{uid}/movements, protegit per les regles).
 export const SECTIONS = [
-  { id: 'menjar', label: 'Menjar', icon: '🛒', color: '#d9a521', kind: 'out' },
-  { id: 'fixes', label: 'Fixes', icon: '📌', color: '#7a8fb8', kind: 'out' },
-  { id: 'compres', label: 'Compres', icon: '🛍️', color: '#b07ab0', kind: 'out' },
-  { id: 'extres', label: 'Extres', icon: '🎉', color: '#c8463a', kind: 'out' },
-  { id: 'ingressos', label: 'Ingressos', icon: '💼', color: '#6f9a7a', kind: 'in' },
-  { id: 'estalvis', label: 'Estalvis', icon: '🐷', color: '#4f8fa0', kind: 'save' },
+  { id: 'menjar', label: 'Menjar', icon: '🛒', color: '#245c43', kind: 'out' },
+  { id: 'fixes', label: 'Fixes', icon: '📌', color: '#4f9270', kind: 'out' },
+  { id: 'compres', label: 'Compres', icon: '🛍️', color: '#8dc0a0', kind: 'out' },
+  { id: 'extres', label: 'Extres', icon: '🎉', color: '#c9a64a', kind: 'out' },
+  { id: 'ingressos', label: 'Ingressos', icon: '💼', color: '#2f7d55', kind: 'in' },
+  { id: 'estalvis', label: 'Estalvis', icon: '🐷', color: '#4f86a0', kind: 'save' },
 ];
 const EXPENSES = SECTIONS.filter((s) => s.kind === 'out');
 const sectionById = (id) => SECTIONS.find((s) => s.id === id);
@@ -71,23 +71,82 @@ export function summarize(movements) {
   return { totals, spent, available, left: available - spent };
 }
 
-// Barra del mes: quant s'ha menjat cada secció dels diners per gastar.
-function chartHtml({ totals, spent, available, left }) {
-  if (!spent && available <= 0) return '';
-  const base = Math.max(available, spent);
-  const parts = EXPENSES.filter((s) => totals[s.id] > 0)
-    .map((s) => `<i style="--c:${s.color};flex-grow:${totals[s.id]}" title="${s.label}"></i>`);
-  if (left > 0) parts.push(`<i class="rest" style="flex-grow:${left}" title="Restant"></i>`);
-  const used = base ? Math.round((spent / base) * 100) : 0;
+// Import gran amb els cèntims més petits, com a la targeta de saldo.
+function bigMoney(cents) {
+  const text = formatCents(cents);
+  const match = text.match(/^(.*?)(,\d{2})(\s*€)$/);
+  return match ? `${escapeHtml(match[1])}<small>${match[2]}${match[3]}</small>` : escapeHtml(text);
+}
+
+function heroHtml({ totals, spent, available, left }) {
+  const used = available > 0 ? Math.round((spent / available) * 100) : (spent ? 100 : 0);
   return `
-    <section class="fin-chart" aria-label="Repartiment de les despeses">
-      <div class="fin-chart-head">
-        <span>${available > 0 ? `Has gastat el <b>${Math.min(used, 999)}%</b> del que tenies per gastar` : 'Despeses del mes'}</span>
+    <section class="fin-hero${left < 0 ? ' negative' : ''}" aria-label="Resum del mes">
+      <span class="fin-hero-label">${ICONS.wallet.replace('<svg', '<svg width="18" height="18"')}Restant</span>
+      <strong class="fin-hero-amount">${bigMoney(left)}</strong>
+      <span class="fin-hero-sub">de ${formatCents(available)} per gastar<span class="fin-pill">${Math.min(used, 999)}% gastat</span></span>
+      <div class="fin-progress${left < 0 ? ' over' : ''}"><i style="width:${Math.min(used, 100)}%"></i></div>
+      <div class="fin-hero-row">
+        <div><span>Ingressos</span><b>${formatCents(totals.ingressos)}</b></div>
+        <div><span>Despeses</span><b>${formatCents(spent)}</b></div>
+        <div><span>Estalvis</span><b>${formatCents(totals.estalvis)}</b></div>
       </div>
-      <div class="stack-bar${left < 0 ? ' over' : ''}">${parts.join('')}</div>
+    </section>`;
+}
+
+// Donut de despeses per secció, amb el total al mig.
+function donutHtml({ totals, spent, available, left }) {
+  if (!spent) return '';
+  const shown = EXPENSES.filter((s) => totals[s.id] > 0);
+  const gap = shown.length > 1 ? 3 : 0;
+  let start = 0;
+  const arcs = shown.map((s) => {
+    const share = (totals[s.id] / spent) * 100;
+    const length = Math.max(share - gap, 0.5);
+    const arc = `<circle r="42" cx="50" cy="50" pathLength="100" stroke="${s.color}" stroke-dasharray="${length} ${100 - length}" stroke-dashoffset="${-start - gap / 2}"></circle>`;
+    start += share;
+    return arc;
+  });
+  const pct = (id) => Math.round((totals[id] / spent) * 100);
+  const tip = available > 0
+    ? (left >= 0
+      ? `<div class="fin-tip"><span>🌱</span><div><b>Et queden ${formatCents(left)}</b>Has gastat el ${Math.round((spent / available) * 100)}% del que tenies per gastar.</div></div>`
+      : `<div class="fin-tip over"><span>⚠️</span><div><b>T'has passat ${formatCents(-left)}</b>Les despeses superen el que tenies per gastar.</div></div>`)
+    : '';
+  return `
+    <section class="fin-card" aria-label="Despeses per secció">
+      <div class="fin-card-head"><h3>Les teves despeses</h3><span>Per secció</span></div>
+      <div class="donut-wrap">
+        <svg class="donut" viewBox="0 0 100 100" aria-hidden="true"><circle class="track" r="42" cx="50" cy="50"></circle>${arcs.join('')}</svg>
+        <div class="donut-center"><b>${formatCents(spent)}</b><span>Total gastat</span></div>
+      </div>
       <ul class="legend">
-        ${EXPENSES.map((s) => `<li><i class="dot" style="--c:${s.color}"></i>${s.label}<b>${formatCents(totals[s.id])}</b></li>`).join('')}
+        ${EXPENSES.map((s) => `<li><i class="dot" style="--c:${s.color}"></i>${s.label} <small>${pct(s.id)}%</small><b>${formatCents(totals[s.id])}</b></li>`).join('')}
       </ul>
+      ${tip}
+    </section>`;
+}
+
+// Barres de despeses dels últims sis mesos fins al mes que es mira.
+function trendHtml(movements, month) {
+  const months = Array.from({ length: 6 }, (_, i) => new Date(month.getFullYear(), month.getMonth() - 5 + i, 1));
+  const values = months.map((m) => summarize(movements.filter((x) => x.date?.startsWith(monthKey(m)))).spent);
+  const max = Math.max(...values);
+  if (!max) return '';
+  const bars = months.map((m, i) => {
+    const current = i === months.length - 1;
+    const label = m.toLocaleDateString('ca-ES', { month: 'short' }).replace('.', '');
+    return `
+      <button type="button" class="bar${current ? ' current' : ''}" data-month="${monthKey(m)}" aria-label="${monthTitle(m)}: ${formatCents(values[i])}">
+        <i style="height:${(values[i] / max) * 100}%"></i>
+        <small>${escapeHtml(capitalize(label))}</small>
+        ${current ? `<em style="bottom:calc(${(values[i] / max) * 100}% + 26px)">${formatCents(values[i])}</em>` : ''}
+      </button>`;
+  });
+  return `
+    <section class="fin-card" aria-label="Evolució de les despeses">
+      <div class="fin-card-head"><h3>Evolució</h3><span>Últims 6 mesos</span></div>
+      <div class="bars">${bars.join('')}</div>
     </section>`;
 }
 
@@ -110,9 +169,16 @@ export function mountFinances(root, { store, isAnonymous, openAccount, toast }) 
       <h2 id="f-month"></h2>
       <button class="round-btn" type="button" id="f-next" aria-label="Mes següent">${ICONS.chevron}</button>
     </div>
-    <section class="stats fin-stats" id="f-stats" aria-label="Resum del mes"></section>
+    <div id="f-stats"></div>
+    <div class="fin-actions">
+      <button type="button" class="fin-action primary" id="f-add"><span>${ICONS.plus}</span>Afegeix</button>
+      <button type="button" class="fin-action" data-quick="menjar"><span>🛒</span>Menjar</button>
+      <button type="button" class="fin-action" data-quick="ingressos"><span>💼</span>Ingrés</button>
+      <button type="button" class="fin-action" data-quick="estalvis"><span>🐷</span>Estalvi</button>
+    </div>
     <div id="f-chart"></div>
-    <button class="btn" type="button" id="f-add">Afegeix</button>
+    <div id="f-trend"></div>
+    <h3 class="fin-title">Seccions</h3>
     <div class="fin-sections" id="f-sections"></div>
     <dialog class="sheet" id="f-editor">
       <form class="sheet-body" method="dialog" id="f-form" novalidate>
@@ -133,6 +199,7 @@ export function mountFinances(root, { store, isAnonymous, openAccount, toast }) 
 
   const stats = root.querySelector('#f-stats');
   const chart = root.querySelector('#f-chart');
+  const trend = root.querySelector('#f-trend');
   const sections = root.querySelector('#f-sections');
   const editor = root.querySelector('#f-editor');
   const form = root.querySelector('#f-form');
@@ -145,32 +212,11 @@ export function mountFinances(root, { store, isAnonymous, openAccount, toast }) 
     root.querySelector('#f-month').textContent = monthTitle(month);
     const current = inMonth();
     const summary = summarize(current);
-    const { totals, spent, available, left } = summary;
+    const { totals } = summary;
 
-    stats.innerHTML = `
-      <div class="stat stat-main${left < 0 ? ' negative' : ''}">
-        <span class="stat-label">Restant</span>
-        <strong>${formatCents(left)}</strong>
-        <small>de ${formatCents(available)} per gastar</small>
-      </div>
-      <div class="stat">
-        <span class="stat-label">Ingressos</span>
-        <strong class="money-in">${formatCents(totals.ingressos)}</strong>
-      </div>
-      <div class="stat">
-        <span class="stat-label">Despeses</span>
-        <strong class="money-out">${formatCents(spent)}</strong>
-      </div>
-      <div class="stat">
-        <span class="stat-label">Estalvis</span>
-        <strong class="money-save">${formatCents(totals.estalvis)}</strong>
-      </div>
-      <div class="stat">
-        <span class="stat-label">Per gastar</span>
-        <strong>${formatCents(available)}</strong>
-      </div>`;
-
-    chart.innerHTML = chartHtml(summary);
+    stats.innerHTML = heroHtml(summary);
+    chart.innerHTML = donutHtml(summary);
+    trend.innerHTML = trendHtml(movements, month);
 
     sections.innerHTML = SECTIONS.map((s) => {
       const items = current.filter((m) => sectionOf(m) === s.id)
@@ -211,6 +257,16 @@ export function mountFinances(root, { store, isAnonymous, openAccount, toast }) 
   }
 
   root.querySelector('#f-add').addEventListener('click', () => openEditor(null));
+  root.querySelectorAll('[data-quick]').forEach((button) => {
+    button.addEventListener('click', () => openEditor(null, button.dataset.quick));
+  });
+  trend.addEventListener('click', (event) => {
+    const key = event.target.closest('.bar')?.dataset.month;
+    if (!key) return;
+    const [y, m] = key.split('-').map(Number);
+    month = new Date(y, m - 1, 1);
+    render();
+  });
   root.querySelector('#f-create-account').addEventListener('click', openAccount);
   root.querySelector('#f-prev').addEventListener('click', () => { month.setMonth(month.getMonth() - 1); render(); });
   root.querySelector('#f-next').addEventListener('click', () => { month.setMonth(month.getMonth() + 1); render(); });

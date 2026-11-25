@@ -1,10 +1,12 @@
 // Abre la app al instante y sin cobertura: sirve la copia guardada y actualiza
 // en segundo plano, así que una versión nueva se ve en la siguiente apertura.
-const CACHE = 'casa-v8';
+const CACHE = 'casa-v9';
 const SHELL = [
   './',
   'index.html',
   'styles.css',
+  'fonts/jakarta-latin.woff2',
+  'fonts/jakarta-latin-ext.woff2',
   'manifest.webmanifest',
   'js/app.js',
   'js/firebase-config.js',
