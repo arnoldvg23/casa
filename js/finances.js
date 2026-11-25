@@ -246,7 +246,8 @@ export function mountFinances(root, { store, isAnonymous, openAccount, toast }) 
     if (!amount) return fail('Escriu un import vàlid, per exemple 12,50.', 'amount');
     const section = form.elements.section.value || lastSection;
     const date = form.elements.date.value || todayIso();
-    const data = { section, name: capitalize(name), amount, date };
+    // `type` i `category` mantenen el format antic: així funciona també amb les regles ja publicades.
+    const data = { section, name: capitalize(name), amount, date, type: section === 'ingressos' ? 'in' : 'out', category: section };
     if (editingId) store.update(editingId, data);
     else store.add({ ...data, createdAt: Date.now() });
     lastSection = section;
