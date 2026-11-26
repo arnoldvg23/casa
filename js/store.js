@@ -185,9 +185,24 @@ function localBackend() {
           subscribe: (cb) => listen(giftListeners, cb, notifyGifts),
           join: (name) => mutateGifts((d) => { d.members[uid] = { id: uid, name, updatedAt: Date.now() }; }),
           add: (gift) => mutateGifts((d) => { const id = crypto.randomUUID(); d.gifts[id] = { ...gift, uid, id }; }),
-          update: (id, patch) => mutateGifts((d) => { Object.assign(d.gifts[id], patch); }),
-          remove: (gift) => mutateGifts((d) => { delete d.gifts[gift.id]; }),
-          restore: (gift) => mutateGifts((d) => { d.gifts[gift.id] = gift; }),
+          // La foto gran va a part (`photos`), com al document photo/full de Firebase.
+          loadPhoto: async (id) => read(code).photos?.[id] ?? '',
+          update: (id, patch, full) => mutateGifts((d) => {
+            Object.assign(d.gifts[id], patch);
+            if (full === undefined) return;
+            delete d.gifts[id].photo;
+            d.photos ??= {};
+            if (full) d.photos[id] = full;
+            else delete d.photos[id];
+          }),
+          async remove(gift) {
+            const full = read(code).photos?.[gift.id];
+            mutateGifts((d) => { delete d.gifts[gift.id]; delete d.photos?.[gift.id]; });
+            return () => mutateGifts((d) => {
+              d.gifts[gift.id] = gift;
+              if (full) (d.photos ??= {})[gift.id] = full;
+            });
+          },
         },
         wishes: {
           subscribe: (cb) => listen(wishListeners, cb, notifyWishes),
@@ -323,6 +338,16 @@ async function firebaseBackend() {
       // afegit i les regles només deixen que aquest uid el canviï o l'esborri.
       const gifts = fs.collection(homeRef(code), 'gifts');
       const members = fs.collection(homeRef(code), 'members');
+      // La foto gran de cada regal, a part perquè la llista no la descarregui.
+      const photoRef = (id) => fs.doc(gifts, id, 'photo', 'full');
+      const loadPhoto = async (id) => {
+        try {
+          const snapshot = await fs.getDoc(photoRef(id));
+          return snapshot.exists() ? snapshot.get('data') : '';
+        } catch {
+          return ''; // sense connexió i sense haver-la vista abans
+        }
+      };
       const uid = auth.currentUser.uid;
       // Finances personals: sota el compte, no sota la llar. Ningú més les pot llegir.
       const movements = fs.collection(userRef(uid), 'movements');
@@ -361,9 +386,33 @@ async function firebaseBackend() {
           // Així cada membre té la seva secció encara que no hagi afegit res.
           join: (name) => report(fs.setDoc(fs.doc(members, uid), { name, updatedAt: Date.now() })),
           add: (gift) => report(fs.addDoc(gifts, { ...gift, uid })),
-          update: (id, patch) => report(fs.updateDoc(fs.doc(gifts, id), patch)),
-          remove: (gift) => report(fs.deleteDoc(fs.doc(gifts, gift.id))),
-          restore: ({ id, ...gift }) => report(fs.setDoc(fs.doc(gifts, id), gift)),
+          loadPhoto,
+          // `full`: undefined si la foto no canvia, '' per treure-la o la foto gran nova.
+          update(id, patch, full) {
+            if (full === undefined) {
+              report(fs.updateDoc(fs.doc(gifts, id), patch));
+              return;
+            }
+            const batch = fs.writeBatch(db);
+            batch.update(fs.doc(gifts, id), { ...patch, photo: fs.deleteField() });
+            if (full) batch.set(photoRef(id), { data: full });
+            else batch.delete(photoRef(id));
+            report(batch.commit());
+          },
+          // Torna la funció de «Desfés»: per això es guarda abans la foto gran.
+          async remove({ id, ...gift }) {
+            const full = gift.thumb ? await loadPhoto(id) : '';
+            const batch = fs.writeBatch(db);
+            batch.delete(fs.doc(gifts, id));
+            if (gift.thumb) batch.delete(photoRef(id));
+            report(batch.commit());
+            return () => {
+              const undo = fs.writeBatch(db);
+              undo.set(fs.doc(gifts, id), gift);
+              if (full) undo.set(photoRef(id), { data: full });
+              report(undo.commit());
+            };
+          },
         },
         wishes: {
           subscribe: (cb) => listen(wishes, (snapshot) => cb(snapshot.docs.map((d) => ({ ...d.data(), id: d.id })))),

@@ -5,10 +5,13 @@ import { ICONS, escapeHtml } from './ui.js';
 // llistes de tothom, però només qui ha afegit un regal el pot canviar (ho
 // controlen les regles de Firestore amb l'uid de cada dispositiu).
 const GIFT_ICON = '🎁';
+// Cada foto es desa dues vegades en JPEG, sense Firebase Storage: una miniatura
+// petita dins del regal (la llista sencera la descarrega cada mòbil) i la foto
+// gran en un document a part que només es baixa quan s'obre el regal.
 const PHOTO_MAX_SIDE = 900;
-// Una foto va dins del mateix document de Firestore (límit 1 MiB), comprimida
-// en JPEG. Així no cal Firebase Storage i funciona igual sense connexió.
 const PHOTO_MAX_CHARS = 600_000;
+const THUMB_MAX_SIDE = 240;
+const THUMB_MAX_CHARS = 50_000;
 
 // Accepta «amazon.es/...» sense protocol, però mai res que no sigui una web.
 export function cleanLink(raw) {
@@ -33,32 +36,43 @@ const linkHost = (link) => {
 const safeLink = (link) => (link && cleanLink(link) === link ? link : '');
 const safePhoto = (photo) => (typeof photo === 'string' && photo.startsWith('data:image/') ? photo : '');
 
-function loadImage(file) {
+// Accepta un fitxer triat al mòbil o una foto ja desada (data:image/...).
+function loadImage(source) {
   return new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(file);
+    const url = typeof source === 'string' ? source : URL.createObjectURL(source);
+    const done = () => { if (url !== source) URL.revokeObjectURL(url); };
     const img = new Image();
-    img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
-    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Imatge no vàlida')); };
+    img.onload = () => { done(); resolve(img); };
+    img.onerror = () => { done(); reject(new Error('Imatge no vàlida')); };
     img.src = url;
   });
 }
 
-// Redueix la foto del mòbil (uns quants MB) a uns 100 KB.
-export async function compressPhoto(file) {
-  const img = await loadImage(file);
-  const scale = Math.min(1, PHOTO_MAX_SIDE / Math.max(img.naturalWidth, img.naturalHeight));
+function toJpeg(img, maxSide, maxChars) {
+  const scale = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
   const canvas = document.createElement('canvas');
-  canvas.width = Math.round(img.naturalWidth * scale);
-  canvas.height = Math.round(img.naturalHeight * scale);
+  canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
+  canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
   const ctx = canvas.getContext('2d');
   ctx.fillStyle = '#fff'; // els PNG transparents no queden negres en JPEG
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
   for (const quality of [0.75, 0.6, 0.45]) {
     const data = canvas.toDataURL('image/jpeg', quality);
-    if (data.length <= PHOTO_MAX_CHARS) return data;
+    if (data.length <= maxChars) return data;
   }
   throw new Error('Foto massa gran');
+}
+
+// Redueix la foto del mòbil (uns quants MB) a una foto d'uns 100 KB i una
+// miniatura d'uns 15 KB.
+export async function compressPhoto(file) {
+  const img = await loadImage(file);
+  return { full: toJpeg(img, PHOTO_MAX_SIDE, PHOTO_MAX_CHARS), thumb: toJpeg(img, THUMB_MAX_SIDE, THUMB_MAX_CHARS) };
+}
+
+export async function makeThumb(photo) {
+  return toJpeg(await loadImage(photo), THUMB_MAX_SIDE, THUMB_MAX_CHARS);
 }
 
 export function mountGifts(root, { store, profile, toast }) {
@@ -66,8 +80,12 @@ export function mountGifts(root, { store, profile, toast }) {
   let gifts = [];
   let members = [];
   let editingId = null;
-  let editorPhoto = '';
+  let editorThumb = '';
+  // undefined: la foto no ha canviat; '': s'ha tret; text: foto gran nova.
+  let editorFull;
   let flashId = null;
+  let viewingId = null;
+  const migrating = new Set();
 
   root.innerHTML = `
     <section class="stats" id="g-stats" aria-label="Resum de Nadal"></section>
@@ -132,8 +150,11 @@ export function mountGifts(root, { store, profile, toast }) {
     return [[myUid, profile.name], ...others];
   }
 
+  // Els regals d'abans de les miniatures només tenen `photo`, la foto gran.
+  const thumbOf = (gift) => safePhoto(gift.thumb || gift.photo);
+
   function thumb(gift) {
-    const photo = safePhoto(gift.photo);
+    const photo = thumbOf(gift);
     return photo
       ? `<span class="item-icon gift-thumb"><img src="${escapeHtml(photo)}" alt="" loading="lazy"></span>`
       : `<span class="item-icon">${GIFT_ICON}</span>`;
@@ -141,7 +162,7 @@ export function mountGifts(root, { store, profile, toast }) {
 
   function cardHtml(gift, own) {
     const link = safeLink(gift.link);
-    const meta = [link ? escapeHtml(linkHost(link)) : '', !own || link || gift.photo ? '' : 'Toca per afegir enllaç o foto']
+    const meta = [link ? escapeHtml(linkHost(link)) : '', !own || link || thumbOf(gift) ? '' : 'Toca per afegir enllaç o foto']
       .filter(Boolean).join(' · ');
     return `
       <li class="item${gift.id === flashId ? ' flash' : ''}" data-id="${escapeHtml(gift.id)}">
@@ -196,18 +217,19 @@ export function mountGifts(root, { store, profile, toast }) {
       render();
       return;
     }
-    store.add({ name: display, link: '', photo: '', addedBy: profile.name, createdAt: Date.now() });
+    store.add({ name: display, link: '', thumb: '', addedBy: profile.name, createdAt: Date.now() });
   }
 
   function showPhoto() {
-    photoPreview.innerHTML = editorPhoto ? `<img src="${escapeHtml(editorPhoto)}" alt="Foto del regal">` : `<span>${GIFT_ICON}</span>`;
-    photoLabel.textContent = editorPhoto ? 'Canvia la foto' : 'Afegeix una foto';
-    photoRemove.hidden = !editorPhoto;
+    photoPreview.innerHTML = editorThumb ? `<img src="${escapeHtml(editorThumb)}" alt="Foto del regal">` : `<span>${GIFT_ICON}</span>`;
+    photoLabel.textContent = editorThumb ? 'Canvia la foto' : 'Afegeix una foto';
+    photoRemove.hidden = !editorThumb;
   }
 
   function openEditor(gift) {
     editingId = gift.id;
-    editorPhoto = safePhoto(gift.photo);
+    editorThumb = thumbOf(gift);
+    editorFull = undefined;
     editorForm.elements.name.value = gift.name;
     editorForm.elements.link.value = gift.link ?? '';
     editorError.hidden = true;
@@ -217,7 +239,15 @@ export function mountGifts(root, { store, profile, toast }) {
 
   function openViewer(gift, ownerName) {
     const link = safeLink(gift.link);
-    const photo = safePhoto(gift.photo);
+    // Primer la miniatura (ja és al mòbil) i, quan arriba, la foto gran.
+    const photo = safePhoto(gift.photo) || safePhoto(gift.thumb);
+    viewingId = gift.id;
+    if (gift.thumb) {
+      store.loadPhoto(gift.id).then((full) => {
+        const img = viewerBody.querySelector('.gift-photo');
+        if (img && viewingId === gift.id && safePhoto(full)) img.src = full;
+      });
+    }
     viewerBody.innerHTML = `
       ${photo ? `<img class="gift-photo" src="${escapeHtml(photo)}" alt="Foto de ${escapeHtml(gift.name)}">` : ''}
       <h2>${escapeHtml(gift.name)}</h2>
@@ -250,7 +280,7 @@ export function mountGifts(root, { store, profile, toast }) {
     if (!file) return;
     photoLabel.textContent = 'Preparant la foto...';
     try {
-      editorPhoto = await compressPhoto(file);
+      ({ thumb: editorThumb, full: editorFull } = await compressPhoto(file));
     } catch (error) {
       console.error(error);
       toast("No s'ha pogut fer servir aquesta foto");
@@ -259,7 +289,8 @@ export function mountGifts(root, { store, profile, toast }) {
   });
 
   photoRemove.addEventListener('click', () => {
-    editorPhoto = '';
+    editorThumb = '';
+    editorFull = '';
     showPhoto();
   });
 
@@ -274,26 +305,40 @@ export function mountGifts(root, { store, profile, toast }) {
       return;
     }
     if (!gift || !name) return;
-    store.update(gift.id, { name, link, photo: editorPhoto });
+    if (editorFull === undefined) store.update(gift.id, { name, link });
+    else store.update(gift.id, { name, link, thumb: editorThumb }, editorFull);
   });
 
-  root.querySelector('#g-editor-delete').addEventListener('click', () => {
+  root.querySelector('#g-editor-delete').addEventListener('click', async () => {
     const gift = findGift(editingId);
     editor.close();
     if (!gift) return;
-    store.remove(gift);
-    toast(`${gift.name} eliminat`, { label: 'Desfés', run: () => store.restore(gift) });
+    const undo = await store.remove(gift);
+    toast(`${gift.name} eliminat`, { label: 'Desfés', run: undo });
   });
 
   [editor, viewer].forEach((sheet) => sheet.addEventListener('click', (event) => {
     if (event.target === sheet || event.target.id === 'g-viewer-close') sheet.close();
   }));
+  viewer.addEventListener('close', () => { viewingId = null; });
+
+  // Els regals propis d'abans tenen la foto gran dins del regal: es passen al
+  // format nou (miniatura + foto a part). Només ho pot fer el mòbil del dueny.
+  function migrateOwnPhotos() {
+    mine().filter((g) => !g.thumb && safePhoto(g.photo) && !migrating.has(g.id)).forEach((gift) => {
+      migrating.add(gift.id);
+      makeThumb(gift.photo)
+        .then((small) => store.update(gift.id, { thumb: small }, gift.photo))
+        .catch((error) => console.error('Miniatura', error));
+    });
+  }
 
   store.join(profile.name);
   const unsubscribe = store.subscribe((state) => {
     gifts = state.gifts;
     members = state.members;
     render();
+    migrateOwnPhotos();
   });
   return {
     destroy: unsubscribe,

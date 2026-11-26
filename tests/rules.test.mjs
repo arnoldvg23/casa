@@ -118,6 +118,30 @@ describe('Nadal', () => {
     await assertFails(home(as('bea')).collection('gifts').add(gift));
     await assertSucceeds(home(as('anna')).collection('gifts').doc(ref.id).update({ name: 'Llibre 2', link: 'https://a.cat', photo: '' }));
   });
+  test('foto gran a part: només el dueny, en el mateix lot que el regal', async () => {
+    const db = as('anna');
+    const ref = await home(db).collection('gifts').add({ ...gift, photo: 'data:image/jpeg;base64,vella' });
+    const photo = ref.collection('photo').doc('full');
+    // Migració o foto nova: miniatura al regal, foto gran a part, `photo` fora.
+    const batch = db.batch();
+    batch.update(ref, { thumb: 'data:image/jpeg;base64,petita', photo: firebase.firestore.FieldValue.delete() });
+    batch.set(photo, { data: 'data:image/jpeg;base64,gran' });
+    await assertSucceeds(batch.commit());
+    await assertSucceeds(home(as('bea')).collection('gifts').doc(ref.id).collection('photo').doc('full').get());
+    await assertFails(home(as('bea')).collection('gifts').doc(ref.id).collection('photo').doc('full').set({ data: 'x' }));
+    await assertFails(photo.set({ data: 'x', extra: 1 }));
+    await assertFails(ref.collection('photo').doc('altra').set({ data: 'x' }));
+    await assertFails(ref.update({ thumb: 'x'.repeat(60001) }));
+    // Eliminar i desfer: regal i foto junts.
+    const remove = db.batch();
+    remove.delete(ref);
+    remove.delete(photo);
+    await assertSucceeds(remove.commit());
+    const undo = db.batch();
+    undo.set(ref, { ...gift, thumb: 'data:image/jpeg;base64,petita' });
+    undo.set(photo, { data: 'data:image/jpeg;base64,gran' });
+    await assertSucceeds(undo.commit());
+  });
   test('membres', async () => {
     await assertSucceeds(home(as('anna')).collection('members').doc('anna').set({ name: 'Anna', updatedAt: 1 }));
     await assertFails(home(as('anna')).collection('members').doc('bea').set({ name: 'Bea', updatedAt: 1 }));
