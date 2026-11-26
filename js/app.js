@@ -17,13 +17,54 @@ const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
 const isAndroid = /android/i.test(navigator.userAgent);
 
 let installPrompt = null;
+// La sessió oberta per renderHome: escoltes de Firestore, pestanyes i listeners
+// globals. Es tanca abans de tornar a pintar perquè no es dupliquin.
+let session = null;
+
+function closeSession() {
+  if (!session) return;
+  session.abort.abort();
+  session.views.forEach((view) => view.destroy());
+  session.store.close();
+  session = null;
+}
 addEventListener('beforeinstallprompt', (event) => {
   event.preventDefault();
   installPrompt = event;
 });
 
+// Una versió nova s'instal·la sencera en segon pla i espera. L'app avisa i
+// només canvia quan l'usuari ho demana: mai barreja fitxers de dues versions.
+function watchForUpdates(registration) {
+  const offer = (worker) => toast('Hi ha una versió nova de Casa', {
+    label: 'Actualitza',
+    run: () => worker.postMessage('skip-waiting'),
+  }, { sticky: true });
+  if (registration.waiting && navigator.serviceWorker.controller) offer(registration.waiting);
+  registration.addEventListener('updatefound', () => {
+    const worker = registration.installing;
+    worker?.addEventListener('statechange', () => {
+      if (worker.state === 'installed' && navigator.serviceWorker.controller) offer(worker);
+    });
+  });
+  // Una PWA pot passar dies oberta: en tornar-hi es busca si hi ha versió nova.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') registration.update().catch(() => {});
+  });
+}
+
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch((error) => console.error('Service worker', error));
+  // La primera instal·lació també pren el control, però aquí no cal recarregar.
+  const hadController = Boolean(navigator.serviceWorker.controller);
+  let reloading = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController || reloading) return;
+    reloading = true;
+    location.reload();
+  });
+  navigator.serviceWorker.register('sw.js')
+    .then(watchForUpdates)
+    .catch((error) => console.error('Service worker', error));
 }
 
 function loadProfile() {
@@ -342,7 +383,11 @@ function renderSettings(backend, profile) {
   });
   sheet.querySelector('#account-create')?.addEventListener('click', () => {
     sheet.close();
-    openAccountSheet(backend, { mode: 'create', profile: { name: profile.name, home: profile.home }, onDone() {} });
+    openAccountSheet(backend, {
+      mode: 'create',
+      profile: { name: profile.name, home: profile.home },
+      onDone: () => session?.finances.setAnonymous(false),
+    });
   });
   sheet.querySelector('#account-login')?.addEventListener('click', () => {
     sheet.close();
@@ -356,29 +401,48 @@ function renderSettings(backend, profile) {
       },
     });
   });
-  sheet.querySelector('#logout')?.addEventListener('click', async () => {
+  sheet.querySelector('#logout')?.addEventListener('click', () => {
     if (!confirm("Sortiràs del compte en aquest mòbil. Hi podràs tornar a entrar amb el correu i la contrasenya.")) return;
-    await backend.account.signOut();
-    localStorage.removeItem(PROFILE_KEY);
-    location.reload();
+    leaveDevice(backend, { signOut: true });
   });
-  sheet.querySelector('#leave').addEventListener('click', async () => {
+  sheet.querySelector('#leave').addEventListener('click', () => {
     if (!confirm('Deixaràs de veure aquesta llista en aquest mòbil. Hi podràs tornar amb el codi.')) return;
-    localStorage.removeItem(PROFILE_KEY);
     // Amb compte, sortir de la llar també tanca la sessió en aquest mòbil.
-    if (!backend.account.current().anonymous) await backend.account.signOut();
-    location.reload();
+    leaveDevice(backend, { signOut: !backend.account.current().anonymous });
   });
   sheet.addEventListener('close', () => {
     const name = sheet.querySelector('#profile-name').value.trim();
     if (name && name !== profile.name) {
+      // Sense tornar a muntar res: les pestanyes comparteixen l'objecte profile.
       profile.name = name;
       saveProfile(profile);
-      renderHome(backend, profile);
+      backend.account.remember({ name: profile.name, home: profile.home });
+      app.querySelector('.hello h1').textContent = name;
+      session?.gifts.rename(name);
     }
     sheet.remove();
   });
   sheet.showModal();
+}
+
+// Sortir del compte o de la llar: no ha de quedar res al mòbil, ni a la
+// caché de Firestore (on hi ha les finances) ni a localStorage.
+const DEVICE_KEYS = [PROFILE_KEY, TAB_KEY, 'casa.finances.seccio'];
+
+async function leaveDevice(backend, { signOut }) {
+  if (await backend.hasPendingWrites()
+    && !confirm("Hi ha canvis que encara no s'han enviat perquè no tens connexió. Si surts ara es perdran. Vols sortir igualment?")) return;
+  closeSession();
+  try {
+    if (signOut) await backend.account.signOut();
+    else await backend.forgetDevice();
+  } catch (error) {
+    // Passa si Casa és oberta en una altra pestanya: aquella encara fa servir la caché.
+    console.error(error);
+    alert("No s'han pogut esborrar les dades d'aquest mòbil. Tanca les altres pestanyes de Casa i torna-ho a provar.");
+  }
+  DEVICE_KEYS.forEach((key) => localStorage.removeItem(key));
+  location.reload();
 }
 
 function greeting() {
@@ -389,6 +453,9 @@ function greeting() {
 }
 
 function renderHome(backend, profile) {
+  closeSession();
+  const abort = new AbortController();
+  const { signal } = abort;
   app.innerHTML = `
     <div class="shell">
       <header class="topbar">
@@ -421,13 +488,13 @@ function renderHome(backend, profile) {
 
   const offline = app.querySelector('#offline');
   const updateConnection = () => { offline.hidden = navigator.onLine; };
-  addEventListener('online', updateConnection);
-  addEventListener('offline', updateConnection);
+  addEventListener('online', updateConnection, { signal });
+  addEventListener('offline', updateConnection, { signal });
   updateConnection();
 
   const installNotice = app.querySelector('#install-notice');
   renderInstallNotice(installNotice);
-  addEventListener('beforeinstallprompt', () => renderInstallNotice(installNotice));
+  addEventListener('beforeinstallprompt', () => renderInstallNotice(installNotice), { signal });
 
   renderNotifyNotice(app.querySelector('#notify-notice'), backend, profile);
   // El token de notificacions pot canviar: es refresca en cada obertura.
@@ -440,19 +507,21 @@ function renderHome(backend, profile) {
 
   backend.account.remember({ name: profile.name, home: profile.home });
   const store = backend.open(profile.home);
-  mountShopping(app.querySelector('#view-compra'), { store, profile, toast });
-  mountWishes(app.querySelector('#view-casa'), { store: store.wishes, profile, toast });
-  mountGifts(app.querySelector('#view-nadal'), { store: store.gifts, profile, toast });
-  mountFinances(app.querySelector('#view-finances'), {
+  const shopping = mountShopping(app.querySelector('#view-compra'), { store, profile, toast });
+  const wishes = mountWishes(app.querySelector('#view-casa'), { store: store.wishes, profile, toast });
+  const gifts = mountGifts(app.querySelector('#view-nadal'), { store: store.gifts, profile, toast });
+  const finances = mountFinances(app.querySelector('#view-finances'), {
     store: store.finances,
     isAnonymous: backend.account.current().anonymous,
     openAccount: () => openAccountSheet(backend, {
       mode: 'create',
       profile: { name: profile.name, home: profile.home },
-      onDone: () => renderHome(backend, profile),
+      // L'uid no canvia en crear el compte: les escoltes continuen sent vàlides.
+      onDone: () => finances.setAnonymous(false),
     }),
     toast,
   });
+  session = { abort, store, gifts, finances, views: [shopping, wishes, gifts, finances] };
 
   // Les seccions queden muntades i escoltant canvis; la pestanya només decideix quina es veu.
   const showTab = (tab) => {

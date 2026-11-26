@@ -331,8 +331,15 @@ export function mountFinances(root, { store, isAnonymous, openAccount, toast }) 
   });
 
   render();
-  store.subscribe((all) => {
+  const unsubscribe = store.subscribe((all) => {
     movements = all;
     render();
   });
+  return {
+    destroy: unsubscribe,
+    // Crear el compte no canvia l'uid: només cal amagar l'avís.
+    setAnonymous(anonymous) {
+      root.querySelector('#f-account').hidden = !anonymous;
+    },
+  };
 }

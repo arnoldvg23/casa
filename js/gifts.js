@@ -290,9 +290,17 @@ export function mountGifts(root, { store, profile, toast }) {
   }));
 
   store.join(profile.name);
-  store.subscribe((state) => {
+  const unsubscribe = store.subscribe((state) => {
     gifts = state.gifts;
     members = state.members;
     render();
   });
+  return {
+    destroy: unsubscribe,
+    // El nom nou es veu a la pròpia secció i, a través de members, a la dels altres.
+    rename(name) {
+      store.join(name);
+      render();
+    },
+  };
 }

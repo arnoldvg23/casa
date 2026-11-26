@@ -335,8 +335,15 @@ export function mountWishes(root, { store, profile, toast }) {
   });
 
   renderPicker();
-  store.subscribe((list) => {
+  const unsubscribe = store.subscribe((list) => {
     wishes = list;
     render();
   });
+  return {
+    destroy() {
+      unsubscribe();
+      sortables.forEach((s) => s.destroy());
+      sortables = [];
+    },
+  };
 }
