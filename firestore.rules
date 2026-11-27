@@ -49,7 +49,11 @@ service cloud.firestore {
     function validGift(data) {
       return data.name is string && data.name.size() > 0 && data.name.size() <= 80
         && (!('link' in data) || (data.link is string && data.link.size() <= 1000))
-        && (!('photo' in data) || (data.photo is string && data.photo.size() <= 700000));
+        && (!('photo' in data) || (data.photo is string && data.photo.size() <= 700000))
+        && (!('thumb' in data) || (data.thumb is string && data.thumb.size() <= 60000));
+    }
+    function giftPath(home, gift) {
+      return /databases/$(database)/documents/households/$(home)/gifts/$(gift);
     }
 
     // Finances: una secció i un concepte (o el format antic de tipus i categoria).
@@ -120,6 +124,17 @@ service cloud.firestore {
           && request.resource.data.uid == request.auth.uid
           && validGift(request.resource.data);
         allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
+
+        // La foto gran, a part de la miniatura. Només el dueny del regal la canvia;
+        // getAfter perquè es desa en el mateix lot que el regal.
+        match /photo/{doc} {
+          allow read: if request.auth != null && homeExists(home);
+          allow create, update: if request.auth != null && doc == 'full'
+            && getAfter(giftPath(home, gift)).data.uid == request.auth.uid
+            && request.resource.data.keys().hasOnly(['data'])
+            && request.resource.data.data is string && request.resource.data.data.size() <= 700000;
+          allow delete: if request.auth != null && get(giftPath(home, gift)).data.uid == request.auth.uid;
+        }
       }
       // Cada miembro solo escribe su propio nombre: así tiene su sección aunque esté vacía.
       match /members/{uid} {
