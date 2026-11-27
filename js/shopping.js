@@ -325,9 +325,10 @@ export function mountShopping(root, { store, profile, toast }) {
     if (event.target === editor) editor.close();
   });
 
-  store.subscribe((state) => {
+  const unsubscribe = store.subscribe((state) => {
     ({ items, history } = state);
     render();
     if (document.activeElement === entry) renderSuggestions();
   });
+  return { destroy: unsubscribe };
 }

@@ -93,6 +93,9 @@ function localBackend() {
 
   return {
     account: localAccounts(),
+    // En mode de prova no hi ha res pendent d'enviar ni cap caché a esborrar.
+    hasPendingWrites: async () => false,
+    forgetDevice: async () => {},
     async createHome(code) {
       localStorage.setItem(keyFor(code), JSON.stringify({ items: {}, history: {}, wishes: {}, gifts: {}, members: {} }));
     },
@@ -140,12 +143,19 @@ function localBackend() {
         localStorage.setItem(keyFor(code), JSON.stringify(data));
         notifyGifts();
       };
-      addEventListener('storage', (event) => {
+      const onStorage = (event) => {
         if (event.key !== keyFor(code)) return;
         notify();
         notifyWishes();
         notifyGifts();
-      });
+      };
+      addEventListener('storage', onStorage);
+      // Cada subscribe torna la funció que el cancel·la, com onSnapshot.
+      const listen = (set, cb, first) => {
+        set.add(cb);
+        first();
+        return () => set.delete(cb);
+      };
 
       // Finances: fora de la llar i per uid, com a Firebase.
       const financeKey = () => `casa.finances.${localUid()}`;
@@ -164,10 +174,7 @@ function localBackend() {
 
       return {
         finances: {
-          subscribe(cb) {
-            financeListeners.add(cb);
-            notifyFinances();
-          },
+          subscribe: (cb) => listen(financeListeners, cb, notifyFinances),
           add: (m) => mutateFinances((d) => { const id = crypto.randomUUID(); d[id] = { ...m, id }; }),
           update: (id, patch) => mutateFinances((d) => { Object.assign(d[id], patch); }),
           remove: (m) => mutateFinances((d) => { delete d[m.id]; }),
@@ -175,10 +182,7 @@ function localBackend() {
         },
         gifts: {
           uid,
-          subscribe(cb) {
-            giftListeners.add(cb);
-            notifyGifts();
-          },
+          subscribe: (cb) => listen(giftListeners, cb, notifyGifts),
           join: (name) => mutateGifts((d) => { d.members[uid] = { id: uid, name, updatedAt: Date.now() }; }),
           add: (gift) => mutateGifts((d) => { const id = crypto.randomUUID(); d.gifts[id] = { ...gift, uid, id }; }),
           update: (id, patch) => mutateGifts((d) => { Object.assign(d.gifts[id], patch); }),
@@ -186,18 +190,16 @@ function localBackend() {
           restore: (gift) => mutateGifts((d) => { d.gifts[gift.id] = gift; }),
         },
         wishes: {
-          subscribe(cb) {
-            wishListeners.add(cb);
-            notifyWishes();
-          },
+          subscribe: (cb) => listen(wishListeners, cb, notifyWishes),
           add: (wish) => mutateWishes((ws) => { const id = crypto.randomUUID(); ws[id] = { ...wish, id }; }),
           update: (id, patch) => mutateWishes((ws) => { Object.assign(ws[id], patch); }),
           removeMany: (list) => mutateWishes((ws) => { list.forEach((w) => delete ws[w.id]); }),
           restoreMany: (list) => mutateWishes((ws) => { list.forEach((w) => { ws[w.id] = w; }); }),
         },
-        subscribe(cb) {
-          listeners.add(cb);
-          notify();
+        subscribe: (cb) => listen(listeners, cb, notify),
+        close() {
+          removeEventListener('storage', onStorage);
+          [listeners, wishListeners, giftListeners, financeListeners].forEach((set) => set.clear());
         },
         add: (item) => mutate((d) => { const id = crypto.randomUUID(); d.items[id] = { ...item, id }; }),
         update: (id, patch) => mutate((d) => { Object.assign(d.items[id], patch); }),
@@ -239,6 +241,20 @@ async function firebaseBackend() {
   // que estos métodos no se esperan: solo se registra si el servidor la rechaza.
   const report = (promise) => promise.catch((error) => console.error('Firestore', error));
 
+  // La caché persistent guarda a IndexedDB tot el que s'ha llegit, finances
+  // incloses: en sortir s'ha d'esborrar perquè no quedi al mòbil. Després
+  // d'això la base de dades queda tancada i cal recarregar la pàgina.
+  async function wipeCache() {
+    await fs.terminate(db);
+    await fs.clearIndexedDbPersistence(db);
+  }
+  // Sense connexió, les escriptures esperen a la caché. Torna true si després
+  // d'uns segons encara n'hi ha de pendents (sortir ara les perdria).
+  const hasPendingWrites = () => Promise.race([
+    fs.waitForPendingWrites(db).then(() => false),
+    new Promise((resolve) => { setTimeout(() => resolve(true), 5000); }),
+  ]);
+
   auth.languageCode = 'ca';
   const account = {
     current() {
@@ -268,12 +284,20 @@ async function firebaseBackend() {
         report(fs.setDoc(userRef(auth.currentUser.uid), { ...profile, updatedAt: Date.now() }, { merge: true }));
       }
     },
-    signOut: () => authSdk.signOut(auth),
+    async signOut() {
+      try {
+        await wipeCache();
+      } finally {
+        await authSdk.signOut(auth);
+      }
+    },
     resetPassword: (email) => authSdk.sendPasswordResetEmail(auth, email),
   };
 
   return {
     account,
+    hasPendingWrites,
+    forgetDevice: wipeCache,
     async createHome(code) {
       await fs.setDoc(homeRef(code), { createdAt: Date.now() });
     },
@@ -303,11 +327,22 @@ async function firebaseBackend() {
       // Finances personals: sota el compte, no sota la llar. Ningú més les pot llegir.
       const movements = fs.collection(userRef(uid), 'movements');
 
+      // Totes les escoltes obertes, per poder-les tancar amb close().
+      const open = new Set();
+      const listen = (query, onNext) => {
+        const stop = fs.onSnapshot(query, onNext, console.error);
+        open.add(stop);
+        return () => { stop(); open.delete(stop); };
+      };
+      const both = (a, b) => () => { a(); b(); };
+
       return {
+        close() {
+          open.forEach((stop) => stop());
+          open.clear();
+        },
         finances: {
-          subscribe(cb) {
-            fs.onSnapshot(movements, (snapshot) => cb(snapshot.docs.map((d) => ({ ...d.data(), id: d.id }))), console.error);
-          },
+          subscribe: (cb) => listen(movements, (snapshot) => cb(snapshot.docs.map((d) => ({ ...d.data(), id: d.id })))),
           add: (m) => report(fs.addDoc(movements, m)),
           update: (id, patch) => report(fs.updateDoc(fs.doc(movements, id), patch)),
           remove: (m) => report(fs.deleteDoc(fs.doc(movements, m.id))),
@@ -318,8 +353,10 @@ async function firebaseBackend() {
           subscribe(cb) {
             const state = { gifts: [], members: [] };
             const docs = (snapshot) => snapshot.docs.map((d) => ({ ...d.data(), id: d.id }));
-            fs.onSnapshot(gifts, (snapshot) => { state.gifts = docs(snapshot); cb({ ...state }); }, console.error);
-            fs.onSnapshot(members, (snapshot) => { state.members = docs(snapshot); cb({ ...state }); }, console.error);
+            return both(
+              listen(gifts, (snapshot) => { state.gifts = docs(snapshot); cb({ ...state }); }),
+              listen(members, (snapshot) => { state.members = docs(snapshot); cb({ ...state }); }),
+            );
           },
           // Així cada membre té la seva secció encara que no hagi afegit res.
           join: (name) => report(fs.setDoc(fs.doc(members, uid), { name, updatedAt: Date.now() })),
@@ -329,9 +366,7 @@ async function firebaseBackend() {
           restore: ({ id, ...gift }) => report(fs.setDoc(fs.doc(gifts, id), gift)),
         },
         wishes: {
-          subscribe(cb) {
-            fs.onSnapshot(wishes, (snapshot) => cb(snapshot.docs.map((d) => ({ ...d.data(), id: d.id }))), console.error);
-          },
+          subscribe: (cb) => listen(wishes, (snapshot) => cb(snapshot.docs.map((d) => ({ ...d.data(), id: d.id })))),
           add: (wish) => report(fs.addDoc(wishes, { ...wish, uid: auth.currentUser.uid })),
           update: (id, patch) => report(fs.updateDoc(fs.doc(wishes, id), patch)),
           removeMany(list) {
@@ -348,8 +383,10 @@ async function firebaseBackend() {
         subscribe(cb) {
           const state = { items: [], history: [] };
           const docs = (snapshot) => snapshot.docs.map((d) => ({ ...d.data(), id: d.id }));
-          fs.onSnapshot(items, (snapshot) => { state.items = docs(snapshot); cb({ ...state }); }, console.error);
-          fs.onSnapshot(history, (snapshot) => { state.history = docs(snapshot); cb({ ...state }); }, console.error);
+          return both(
+            listen(items, (snapshot) => { state.items = docs(snapshot); cb({ ...state }); }),
+            listen(history, (snapshot) => { state.history = docs(snapshot); cb({ ...state }); }),
+          );
         },
         add: (item) => report(fs.addDoc(items, { ...item, uid: auth.currentUser.uid })),
         update: (id, patch) => report(fs.updateDoc(fs.doc(items, id), patch)),

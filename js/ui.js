@@ -23,7 +23,8 @@ export const ICONS = {
 const TOAST_MS = 5000;
 let toastTimer;
 
-export function toast(message, action) {
+// `sticky`: es queda fins que es toca (per a avisos que no es poden perdre).
+export function toast(message, action, { sticky = false } = {}) {
   const el = document.getElementById('toast');
   el.textContent = message;
   if (action) {
@@ -38,5 +39,5 @@ export function toast(message, action) {
   }
   el.hidden = false;
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { el.hidden = true; }, TOAST_MS);
+  if (!sticky) toastTimer = setTimeout(() => { el.hidden = true; }, TOAST_MS);
 }
