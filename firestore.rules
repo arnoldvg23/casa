@@ -84,6 +84,24 @@ service cloud.firestore {
       }
     }
 
+    // Alexa: la app crea un codi d'un sol ús (6 xifres, 15 minuts) i la skill,
+    // des del servidor, el canvia per la llar. Ningú el pot llegir ni llistar,
+    // i no es pot sobreescriure el d'un altre (crear un que ja existeix falla).
+    match /alexaCodes/{code} {
+      allow create: if request.auth != null && code.matches('^[1-9][0-9]{5}$')
+        && onlyKeys(['home', 'uid', 'name', 'expiresAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.home is string && homeExists(request.resource.data.home)
+        && textField(request.resource.data, 'name', 40)
+        && request.resource.data.expiresAt is int
+        && request.resource.data.expiresAt <= request.time.toMillis() + 20 * 60 * 1000;
+      allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
+    }
+    // Quin compte d'Alexa va a quina llar: només ho toca el servidor.
+    match /alexaLinks/{alexaUser} {
+      allow read, write: if false;
+    }
+
     // Nadie puede listar los hogares: para entrar hay que conocer el código.
     match /households/{home} {
       allow get: if request.auth != null;

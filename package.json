@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test tests/sw-shell.test.mjs",
+    "test": "node --test tests/sw-shell.test.mjs tests/alexa.test.mjs",
     "test:rules": "firebase emulators:exec --only firestore --project demo-casa \"node --test tests/rules.test.mjs\""
   },
   "devDependencies": {

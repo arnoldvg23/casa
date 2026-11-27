@@ -25,6 +25,10 @@ export function normalizeCode(input) {
   return formatCode(raw);
 }
 
+// Codi de 6 xifres per connectar Alexa (sense zero davant: Alexa els perdria).
+const ALEXA_CODE_TTL = 15 * 60 * 1000;
+const newAlexaCode = () => String(100000 + (crypto.getRandomValues(new Uint32Array(1))[0] % 900000));
+
 const historyKey = (name) => encodeURIComponent(normalize(name)).slice(0, 200);
 
 // En mode de prova cada navegador fa de membre diferent, com l'usuari anònim de Firebase.
@@ -96,6 +100,8 @@ function localBackend() {
     // En mode de prova no hi ha res pendent d'enviar ni cap caché a esborrar.
     hasPendingWrites: async () => false,
     forgetDevice: async () => {},
+    // En mode de prova no hi ha servidor: el codi només serveix per veure la pantalla.
+    alexaCode: async () => newAlexaCode(),
     async createHome(code) {
       localStorage.setItem(keyFor(code), JSON.stringify({ items: {}, history: {}, wishes: {}, gifts: {}, members: {} }));
     },
@@ -313,6 +319,22 @@ async function firebaseBackend() {
     account,
     hasPendingWrites,
     forgetDevice: wipeCache,
+    // La skill d'Alexa canvia aquest codi per la llar (un sol ús, 15 minuts).
+    // Si per casualitat ja existeix, la regla el rebutja i se'n prova un altre.
+    async alexaCode(code, name) {
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        const digits = newAlexaCode();
+        try {
+          await fs.setDoc(fs.doc(db, 'alexaCodes', digits), {
+            home: code, uid: auth.currentUser.uid, name, expiresAt: Date.now() + ALEXA_CODE_TTL,
+          });
+          return digits;
+        } catch (error) {
+          if (error.code !== 'permission-denied' || attempt === 4) throw error;
+        }
+      }
+      throw new Error('alexa-code');
+    },
     async createHome(code) {
       await fs.setDoc(homeRef(code), { createdAt: Date.now() });
     },

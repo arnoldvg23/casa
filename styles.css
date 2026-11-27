@@ -296,6 +296,11 @@ dialog.sheet::backdrop { background: rgb(10 14 10 / 45%); }
   user-select: all; -webkit-user-select: all;
 }
 
+.alexa-box { display: grid; gap: 8px; }
+.alexa-box p { margin: 0; }
+.alexa-say { font-weight: 700; }
+.alexa-note { color: var(--muted); font-size: 13px; }
+
 /* Benvinguda */
 .welcome {
   max-width: 420px; min-height: 100dvh; margin: 0 auto; display: flex; flex-direction: column; justify-content: center;

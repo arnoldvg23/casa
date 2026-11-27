@@ -1,0 +1,1187 @@
+{
+  "interactionModel": {
+    "languageModel": {
+      "invocationName": "mi casa",
+      "intents": [
+        {
+          "name": "AddItemIntent",
+          "slots": [
+            {
+              "name": "producto",
+              "type": "PRODUCTO"
+            }
+          ],
+          "samples": [
+            "añade {producto}",
+            "añade {producto} a la lista",
+            "añade {producto} a la lista de la compra",
+            "añade {producto} a la cesta",
+            "añadir {producto}",
+            "añadir {producto} a la lista",
+            "añadir {producto} a la lista de la compra",
+            "añadir {producto} a la cesta",
+            "que añada {producto}",
+            "que añada {producto} a la lista",
+            "que añada {producto} a la lista de la compra",
+            "que añada {producto} a la cesta",
+            "apunta {producto}",
+            "apunta {producto} a la lista",
+            "apunta {producto} a la lista de la compra",
+            "apunta {producto} a la cesta",
+            "que apunte {producto}",
+            "que apunte {producto} a la lista",
+            "que apunte {producto} a la lista de la compra",
+            "que apunte {producto} a la cesta",
+            "pon {producto}",
+            "pon {producto} a la lista",
+            "pon {producto} a la lista de la compra",
+            "pon {producto} a la cesta",
+            "que ponga {producto}",
+            "que ponga {producto} a la lista",
+            "que ponga {producto} a la lista de la compra",
+            "que ponga {producto} a la cesta",
+            "mete {producto}",
+            "mete {producto} a la lista",
+            "mete {producto} a la lista de la compra",
+            "mete {producto} a la cesta",
+            "que meta {producto}",
+            "que meta {producto} a la lista",
+            "que meta {producto} a la lista de la compra",
+            "que meta {producto} a la cesta",
+            "agrega {producto}",
+            "agrega {producto} a la lista",
+            "agrega {producto} a la lista de la compra",
+            "agrega {producto} a la cesta",
+            "que agregue {producto}",
+            "que agregue {producto} a la lista",
+            "que agregue {producto} a la lista de la compra",
+            "que agregue {producto} a la cesta",
+            "necesitamos {producto}",
+            "que necesitamos {producto}",
+            "falta {producto}",
+            "que falta {producto}",
+            "faltan {producto}",
+            "hay que comprar {producto}",
+            "que hay que comprar {producto}",
+            "compra {producto}",
+            "que compre {producto}"
+          ]
+        },
+        {
+          "name": "ReadListIntent",
+          "slots": [],
+          "samples": [
+            "qué hay en la lista",
+            "que me diga qué hay en la lista",
+            "qué falta",
+            "qué tengo que comprar",
+            "qué hay que comprar",
+            "lee la lista",
+            "que lea la lista",
+            "dime la lista"
+          ]
+        },
+        {
+          "name": "LinkIntent",
+          "slots": [
+            {
+              "name": "codigo",
+              "type": "AMAZON.NUMBER"
+            }
+          ],
+          "samples": [
+            "mi código es {codigo}",
+            "que mi código es {codigo}",
+            "el código es {codigo}",
+            "código {codigo}",
+            "conectar con el código {codigo}",
+            "vincular con el código {codigo}"
+          ]
+        },
+        {
+          "name": "UnlinkIntent",
+          "slots": [],
+          "samples": [
+            "desconecta alexa",
+            "que se desconecte",
+            "desvincula mi cuenta",
+            "olvida mi casa",
+            "que olvide mi casa"
+          ]
+        },
+        {
+          "name": "AMAZON.HelpIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.StopIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.CancelIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.NavigateHomeIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.FallbackIntent",
+          "samples": []
+        }
+      ],
+      "types": [
+        {
+          "name": "PRODUCTO",
+          "values": [
+            {
+              "name": {
+                "value": "tomates"
+              }
+            },
+            {
+              "name": {
+                "value": "plátanos"
+              }
+            },
+            {
+              "name": {
+                "value": "manzanas"
+              }
+            },
+            {
+              "name": {
+                "value": "naranjas"
+              }
+            },
+            {
+              "name": {
+                "value": "limones"
+              }
+            },
+            {
+              "name": {
+                "value": "patatas"
+              }
+            },
+            {
+              "name": {
+                "value": "cebollas"
+              }
+            },
+            {
+              "name": {
+                "value": "ajos"
+              }
+            },
+            {
+              "name": {
+                "value": "lechuga"
+              }
+            },
+            {
+              "name": {
+                "value": "zanahorias"
+              }
+            },
+            {
+              "name": {
+                "value": "pimientos"
+              }
+            },
+            {
+              "name": {
+                "value": "calabacín"
+              }
+            },
+            {
+              "name": {
+                "value": "berenjena"
+              }
+            },
+            {
+              "name": {
+                "value": "pepino"
+              }
+            },
+            {
+              "name": {
+                "value": "aguacates"
+              }
+            },
+            {
+              "name": {
+                "value": "fresas"
+              }
+            },
+            {
+              "name": {
+                "value": "uvas"
+              }
+            },
+            {
+              "name": {
+                "value": "peras"
+              }
+            },
+            {
+              "name": {
+                "value": "melocotones"
+              }
+            },
+            {
+              "name": {
+                "value": "melón"
+              }
+            },
+            {
+              "name": {
+                "value": "sandía"
+              }
+            },
+            {
+              "name": {
+                "value": "piña"
+              }
+            },
+            {
+              "name": {
+                "value": "kiwis"
+              }
+            },
+            {
+              "name": {
+                "value": "mandarines"
+              }
+            },
+            {
+              "name": {
+                "value": "espinacas"
+              }
+            },
+            {
+              "name": {
+                "value": "brócoli"
+              }
+            },
+            {
+              "name": {
+                "value": "coliflor"
+              }
+            },
+            {
+              "name": {
+                "value": "champiñones"
+              }
+            },
+            {
+              "name": {
+                "value": "setas"
+              }
+            },
+            {
+              "name": {
+                "value": "calabaza"
+              }
+            },
+            {
+              "name": {
+                "value": "puerros"
+              }
+            },
+            {
+              "name": {
+                "value": "judías verdes"
+              }
+            },
+            {
+              "name": {
+                "value": "fruta"
+              }
+            },
+            {
+              "name": {
+                "value": "verdura"
+              }
+            },
+            {
+              "name": {
+                "value": "ensalada"
+              }
+            },
+            {
+              "name": {
+                "value": "perejil"
+              }
+            },
+            {
+              "name": {
+                "value": "albahaca"
+              }
+            },
+            {
+              "name": {
+                "value": "patatas para freír"
+              }
+            },
+            {
+              "name": {
+                "value": "patatrs per fregir"
+              }
+            },
+            {
+              "name": {
+                "value": "tomates para untar"
+              }
+            },
+            {
+              "name": {
+                "value": "pollo"
+              }
+            },
+            {
+              "name": {
+                "value": "pechuga de pollo"
+              }
+            },
+            {
+              "name": {
+                "value": "ternera"
+              }
+            },
+            {
+              "name": {
+                "value": "cerdo"
+              }
+            },
+            {
+              "name": {
+                "value": "lomo"
+              }
+            },
+            {
+              "name": {
+                "value": "carne picada"
+              }
+            },
+            {
+              "name": {
+                "value": "hamburguesas"
+              }
+            },
+            {
+              "name": {
+                "value": "salchichas"
+              }
+            },
+            {
+              "name": {
+                "value": "botifarra"
+              }
+            },
+            {
+              "name": {
+                "value": "costillas"
+              }
+            },
+            {
+              "name": {
+                "value": "conejo"
+              }
+            },
+            {
+              "name": {
+                "value": "pavo"
+              }
+            },
+            {
+              "name": {
+                "value": "jamón"
+              }
+            },
+            {
+              "name": {
+                "value": "jamón serrano"
+              }
+            },
+            {
+              "name": {
+                "value": "jamón york"
+              }
+            },
+            {
+              "name": {
+                "value": "chorizo"
+              }
+            },
+            {
+              "name": {
+                "value": "fuet"
+              }
+            },
+            {
+              "name": {
+                "value": "salami"
+              }
+            },
+            {
+              "name": {
+                "value": "bacon"
+              }
+            },
+            {
+              "name": {
+                "value": "panceta"
+              }
+            },
+            {
+              "name": {
+                "value": "salmón"
+              }
+            },
+            {
+              "name": {
+                "value": "merluza"
+              }
+            },
+            {
+              "name": {
+                "value": "bacalao"
+              }
+            },
+            {
+              "name": {
+                "value": "atún fresco"
+              }
+            },
+            {
+              "name": {
+                "value": "gambas"
+              }
+            },
+            {
+              "name": {
+                "value": "langostinos"
+              }
+            },
+            {
+              "name": {
+                "value": "mejillones"
+              }
+            },
+            {
+              "name": {
+                "value": "sepia"
+              }
+            },
+            {
+              "name": {
+                "value": "calamares"
+              }
+            },
+            {
+              "name": {
+                "value": "pescado"
+              }
+            },
+            {
+              "name": {
+                "value": "carne"
+              }
+            },
+            {
+              "name": {
+                "value": "albóndigas"
+              }
+            },
+            {
+              "name": {
+                "value": "carne para fajitas"
+              }
+            },
+            {
+              "name": {
+                "value": "leche"
+              }
+            },
+            {
+              "name": {
+                "value": "huevos"
+              }
+            },
+            {
+              "name": {
+                "value": "yogures"
+              }
+            },
+            {
+              "name": {
+                "value": "queso"
+              }
+            },
+            {
+              "name": {
+                "value": "queso rallado"
+              }
+            },
+            {
+              "name": {
+                "value": "mantequilla"
+              }
+            },
+            {
+              "name": {
+                "value": "nata"
+              }
+            },
+            {
+              "name": {
+                "value": "kéfir"
+              }
+            },
+            {
+              "name": {
+                "value": "natillas"
+              }
+            },
+            {
+              "name": {
+                "value": "flan"
+              }
+            },
+            {
+              "name": {
+                "value": "margarina"
+              }
+            },
+            {
+              "name": {
+                "value": "queso crema"
+              }
+            },
+            {
+              "name": {
+                "value": "formatge crema"
+              }
+            },
+            {
+              "name": {
+                "value": "philadelphia"
+              }
+            },
+            {
+              "name": {
+                "value": "mascarpone"
+              }
+            },
+            {
+              "name": {
+                "value": "nata para montar"
+              }
+            },
+            {
+              "name": {
+                "value": "nata per montar"
+              }
+            },
+            {
+              "name": {
+                "value": "pan"
+              }
+            },
+            {
+              "name": {
+                "value": "pan de molde"
+              }
+            },
+            {
+              "name": {
+                "value": "barra de pan"
+              }
+            },
+            {
+              "name": {
+                "value": "tostadas"
+              }
+            },
+            {
+              "name": {
+                "value": "galletas"
+              }
+            },
+            {
+              "name": {
+                "value": "magdalenas"
+              }
+            },
+            {
+              "name": {
+                "value": "croissants"
+              }
+            },
+            {
+              "name": {
+                "value": "bollería"
+              }
+            },
+            {
+              "name": {
+                "value": "cereales"
+              }
+            },
+            {
+              "name": {
+                "value": "granola"
+              }
+            },
+            {
+              "name": {
+                "value": "galletas maría"
+              }
+            },
+            {
+              "name": {
+                "value": "dinosaurus"
+              }
+            },
+            {
+              "name": {
+                "value": "dinosauris"
+              }
+            },
+            {
+              "name": {
+                "value": "tortitas"
+              }
+            },
+            {
+              "name": {
+                "value": "tortitas de chocolate"
+              }
+            },
+            {
+              "name": {
+                "value": "tortillas de trigo"
+              }
+            },
+            {
+              "name": {
+                "value": "fajitas"
+              }
+            },
+            {
+              "name": {
+                "value": "wraps"
+              }
+            },
+            {
+              "name": {
+                "value": "crema de cacao"
+              }
+            },
+            {
+              "name": {
+                "value": "nocilla"
+              }
+            },
+            {
+              "name": {
+                "value": "nutella"
+              }
+            },
+            {
+              "name": {
+                "value": "arroz"
+              }
+            },
+            {
+              "name": {
+                "value": "pasta"
+              }
+            },
+            {
+              "name": {
+                "value": "macarrones"
+              }
+            },
+            {
+              "name": {
+                "value": "espaguetis"
+              }
+            },
+            {
+              "name": {
+                "value": "fideos"
+              }
+            },
+            {
+              "name": {
+                "value": "harina"
+              }
+            },
+            {
+              "name": {
+                "value": "azúcar"
+              }
+            },
+            {
+              "name": {
+                "value": "sal"
+              }
+            },
+            {
+              "name": {
+                "value": "aceite"
+              }
+            },
+            {
+              "name": {
+                "value": "aceite de oliva"
+              }
+            },
+            {
+              "name": {
+                "value": "vinagre"
+              }
+            },
+            {
+              "name": {
+                "value": "lentejas"
+              }
+            },
+            {
+              "name": {
+                "value": "garbanzos"
+              }
+            },
+            {
+              "name": {
+                "value": "alubias"
+              }
+            },
+            {
+              "name": {
+                "value": "atún"
+              }
+            },
+            {
+              "name": {
+                "value": "sardinas"
+              }
+            },
+            {
+              "name": {
+                "value": "tomate frito"
+              }
+            },
+            {
+              "name": {
+                "value": "mayonesa"
+              }
+            },
+            {
+              "name": {
+                "value": "ketchup"
+              }
+            },
+            {
+              "name": {
+                "value": "mostaza"
+              }
+            },
+            {
+              "name": {
+                "value": "café"
+              }
+            },
+            {
+              "name": {
+                "value": "té"
+              }
+            },
+            {
+              "name": {
+                "value": "infusiones"
+              }
+            },
+            {
+              "name": {
+                "value": "cacao"
+              }
+            },
+            {
+              "name": {
+                "value": "chocolate"
+              }
+            },
+            {
+              "name": {
+                "value": "xocolate"
+              }
+            },
+            {
+              "name": {
+                "value": "xoco"
+              }
+            },
+            {
+              "name": {
+                "value": "chocolate negro"
+              }
+            },
+            {
+              "name": {
+                "value": "xocolate negre"
+              }
+            },
+            {
+              "name": {
+                "value": "xoco negre"
+              }
+            },
+            {
+              "name": {
+                "value": "miel"
+              }
+            },
+            {
+              "name": {
+                "value": "mermelada"
+              }
+            },
+            {
+              "name": {
+                "value": "levadura"
+              }
+            },
+            {
+              "name": {
+                "value": "especias"
+              }
+            },
+            {
+              "name": {
+                "value": "pimienta"
+              }
+            },
+            {
+              "name": {
+                "value": "orégano"
+              }
+            },
+            {
+              "name": {
+                "value": "caldo"
+              }
+            },
+            {
+              "name": {
+                "value": "aceitunas"
+              }
+            },
+            {
+              "name": {
+                "value": "patatas fritas"
+              }
+            },
+            {
+              "name": {
+                "value": "frutos secos"
+              }
+            },
+            {
+              "name": {
+                "value": "almendras"
+              }
+            },
+            {
+              "name": {
+                "value": "nueces"
+              }
+            },
+            {
+              "name": {
+                "value": "guacamole"
+              }
+            },
+            {
+              "name": {
+                "value": "helado"
+              }
+            },
+            {
+              "name": {
+                "value": "pizza"
+              }
+            },
+            {
+              "name": {
+                "value": "pizza congelada"
+              }
+            },
+            {
+              "name": {
+                "value": "croquetas"
+              }
+            },
+            {
+              "name": {
+                "value": "verdura congelada"
+              }
+            },
+            {
+              "name": {
+                "value": "guisantes"
+              }
+            },
+            {
+              "name": {
+                "value": "empanadillas"
+              }
+            },
+            {
+              "name": {
+                "value": "varitas de merluza"
+              }
+            },
+            {
+              "name": {
+                "value": "hielo"
+              }
+            },
+            {
+              "name": {
+                "value": "agua"
+              }
+            },
+            {
+              "name": {
+                "value": "zumo"
+              }
+            },
+            {
+              "name": {
+                "value": "refrescos"
+              }
+            },
+            {
+              "name": {
+                "value": "aquarius"
+              }
+            },
+            {
+              "name": {
+                "value": "cerveza"
+              }
+            },
+            {
+              "name": {
+                "value": "vino"
+              }
+            },
+            {
+              "name": {
+                "value": "cava"
+              }
+            },
+            {
+              "name": {
+                "value": "tónica"
+              }
+            },
+            {
+              "name": {
+                "value": "detergente"
+              }
+            },
+            {
+              "name": {
+                "value": "suavizante"
+              }
+            },
+            {
+              "name": {
+                "value": "lavavajillas"
+              }
+            },
+            {
+              "name": {
+                "value": "lejía"
+              }
+            },
+            {
+              "name": {
+                "value": "fregasuelos"
+              }
+            },
+            {
+              "name": {
+                "value": "limpiacristales"
+              }
+            },
+            {
+              "name": {
+                "value": "multiusos"
+              }
+            },
+            {
+              "name": {
+                "value": "estropajos"
+              }
+            },
+            {
+              "name": {
+                "value": "bayetas"
+              }
+            },
+            {
+              "name": {
+                "value": "bolsas de basura"
+              }
+            },
+            {
+              "name": {
+                "value": "papel de cocina"
+              }
+            },
+            {
+              "name": {
+                "value": "papel de aluminio"
+              }
+            },
+            {
+              "name": {
+                "value": "papel film"
+              }
+            },
+            {
+              "name": {
+                "value": "pastillas lavavajillas"
+              }
+            },
+            {
+              "name": {
+                "value": "papel higiénico"
+              }
+            },
+            {
+              "name": {
+                "value": "champú"
+              }
+            },
+            {
+              "name": {
+                "value": "gel de ducha"
+              }
+            },
+            {
+              "name": {
+                "value": "pasta de dientes"
+              }
+            },
+            {
+              "name": {
+                "value": "cepillo de dientes"
+              }
+            },
+            {
+              "name": {
+                "value": "desodorante"
+              }
+            },
+            {
+              "name": {
+                "value": "compresas"
+              }
+            },
+            {
+              "name": {
+                "value": "tampones"
+              }
+            },
+            {
+              "name": {
+                "value": "pañuelos"
+              }
+            },
+            {
+              "name": {
+                "value": "crema solar"
+              }
+            },
+            {
+              "name": {
+                "value": "crema hidratante"
+              }
+            },
+            {
+              "name": {
+                "value": "maquinillas"
+              }
+            },
+            {
+              "name": {
+                "value": "jabón de manos"
+              }
+            },
+            {
+              "name": {
+                "value": "algodón"
+              }
+            },
+            {
+              "name": {
+                "value": "tiritas"
+              }
+            },
+            {
+              "name": {
+                "value": "colutorio"
+              }
+            },
+            {
+              "name": {
+                "value": "colotori"
+              }
+            },
+            {
+              "name": {
+                "value": "colotorio"
+              }
+            },
+            {
+              "name": {
+                "value": "enjuague bucal"
+              }
+            },
+            {
+              "name": {
+                "value": "pilas"
+              }
+            },
+            {
+              "name": {
+                "value": "bombillas"
+              }
+            },
+            {
+              "name": {
+                "value": "comida de gato"
+              }
+            },
+            {
+              "name": {
+                "value": "comida de perro"
+              }
+            },
+            {
+              "name": {
+                "value": "velas"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -367,6 +367,8 @@ function renderSettings(backend, profile) {
       <div class="code">${escapeHtml(profile.home)}</div>
       <button class="btn dark" type="button" id="invite">Convida la família</button>
       ${showNotify ? '<button class="btn secondary" type="button" id="notify">Activa les notificacions</button>' : ''}
+      <button class="btn secondary" type="button" id="alexa">Connecta amb Alexa</button>
+      <div id="alexa-box" class="alexa-box" hidden></div>
       <button class="btn secondary" type="button" id="close">Fet</button>
       ${account.anonymous ? '' : '<button class="btn danger" type="button" id="logout">Tanca la sessió</button>'}
       <button class="btn danger" type="button" id="leave">Surt d'aquesta llar</button>
@@ -376,6 +378,25 @@ function renderSettings(backend, profile) {
   sheet.querySelector('#invite').addEventListener('click', () => shareInvite(profile.home));
   sheet.querySelector('#notify')?.addEventListener('click', async (event) => {
     if (await enableNotifications(backend, profile)) event.target.hidden = true;
+  });
+  sheet.querySelector('#alexa').addEventListener('click', async (event) => {
+    const box = sheet.querySelector('#alexa-box');
+    event.target.disabled = true;
+    try {
+      const code = await backend.alexaCode(profile.home, profile.name);
+      box.innerHTML = `
+        <p>Digues a l'Alexa (en castellà):</p>
+        <p class="alexa-say">«Alexa, dile a mi casa que mi código es ${code}»</p>
+        <div class="code">${code}</div>
+        <p class="alexa-note">El codi caduca d'aquí a 15 minuts i només serveix un cop. Després ja podràs dir «Alexa, dile a mi casa que añada leche».</p>`;
+      box.hidden = false;
+      event.target.textContent = 'Genera un altre codi';
+    } catch (error) {
+      console.error(error);
+      toast("No s'ha pogut crear el codi. Torna-ho a provar.");
+    } finally {
+      event.target.disabled = false;
+    }
   });
   sheet.querySelector('#close').addEventListener('click', () => sheet.close());
   sheet.addEventListener('click', (event) => {
