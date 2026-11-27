@@ -1,6 +1,6 @@
 // Obre l'app a l'instant i sense cobertura: tot surt de la caché de la versió
 // instal·lada. Quan n'hi ha una de nova, l'app ofereix «Actualitza».
-const CACHE = 'casa-v13';
+const CACHE = 'casa-v14';
 const SHELL = [
   './',
   'index.html',

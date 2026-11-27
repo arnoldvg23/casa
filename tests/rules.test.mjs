@@ -171,3 +171,24 @@ describe('comptes i finances', () => {
     await assertFails(db.collection('users/anna/movements').add({ ...movement, amount: 12.5 }));
   });
 });
+
+describe('alexa', () => {
+  const code = (uid, extra = {}) => ({ home: HOME, uid, name: 'Anna', expiresAt: Date.now() + 15 * 60 * 1000, ...extra });
+  test('l\'app crea el seu codi', async () => {
+    await assertSucceeds(as('anna').doc('alexaCodes/482913').set(code('anna')));
+  });
+  test('no es pot llegir, sobreescriure ni fer trampes amb el codi', async () => {
+    await as('anna').doc('alexaCodes/482913').set(code('anna'));
+    await assertFails(as('bea').doc('alexaCodes/482913').get());
+    await assertFails(as('bea').doc('alexaCodes/482913').set(code('bea')));
+    await assertFails(as('bea').collection('alexaCodes').get());
+    await assertFails(as('bea').doc('alexaCodes/111111').set(code('anna')));
+    await assertFails(as('bea').doc('alexaCodes/222222').set(code('bea', { home: 'NO-EXISTEIX' })));
+    await assertFails(as('bea').doc('alexaCodes/333333').set(code('bea', { expiresAt: Date.now() + 86400000 })));
+    await assertFails(as('bea').doc('alexaCodes/012345').set(code('bea')));
+  });
+  test('les vinculacions només les toca el servidor', async () => {
+    await assertFails(as('anna').doc('alexaLinks/amzn1.ask.account.X').get());
+    await assertFails(as('anna').doc('alexaLinks/amzn1.ask.account.X').set({ home: HOME }));
+  });
+});
